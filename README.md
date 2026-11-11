@@ -2,8 +2,7 @@
 
 Team Genesis, University of Malta. Interactive demo of how a hospital trolley robot behaves around people, using the Chapter 5 people-aware safety layer (MII) together with a battery power supervisor.
 
-**Offline:** download `index.html` and open it in any browser. No server or install needed.
-**Live link:** once GitHub Pages is switched on for this repo (see the last section), the demo runs at https://hypdlee.github.io/robotic-championship/
+**Run it:** open [`index.html`](https://github.com/hypdlee/robotic-championship/blob/main/index.html), click the download icon (top right of the file view), then open the saved file in any browser. No server or install needed. (GitHub shows HTML files as code, so it cannot run the page itself.)
 
 ![Overview of the demo page](media/overview.png)
 
@@ -44,4 +43,4 @@ Each case has a 3D ward view (follow, robot camera with detections, overhead), t
 
 ## Turn on the live demo
 
-Repo Settings, Pages, Source: Deploy from a branch, Branch: `main`, folder `/ (root)`. The page appears at the link above within a minute or two.
+Repo Settings, Pages, Source: Deploy from a branch, Branch: `main`, folder `/ (root)`. The page then runs at https://hypdlee.github.io/robotic-championship/ within a minute or two. That link only works after Pages is enabled.
