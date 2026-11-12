@@ -17,7 +17,10 @@ main{max-width:1240px;margin:0 auto;padding:20px 16px 60px}h1{font-size:23px;mar
 .cc:hover{border-color:var(--acc)}.cc.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset;background:var(--accsoft)}
 .cc b{font-size:14px;line-height:1.25}.cc .nn{color:var(--mute);font-size:12px}
 .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;border:1px solid var(--line);color:var(--mute);width:fit-content}
-.tag.people{color:var(--acc);border-color:var(--acc)}.tag.failure{color:var(--warn);border-color:var(--warn)}.tag.power{color:var(--bad);border-color:var(--bad)}
+.tag.people{color:var(--acc);border-color:var(--acc)}.tag.failure{color:var(--warn);border-color:var(--warn)}.tag.power{color:var(--bad);border-color:var(--bad)}.tag.lidar{color:#2563eb;border-color:#2563eb}@media (prefers-color-scheme:dark){.tag.lidar{color:#9dbbf7;border-color:#9dbbf7}}
+#map{width:100%;height:340px;display:block;border-radius:6px;background:#0b1218}
+#cov{width:100%;max-width:760px;height:auto;display:block}
+.dtab td:first-child{font-weight:600;white-space:nowrap}
 .head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .opts{display:flex;flex-wrap:wrap;gap:14px;align-items:end;margin:0 0 12px}
 .opts label{display:flex;flex-direction:column;font-size:12px;color:var(--mute);gap:3px}
@@ -27,7 +30,7 @@ select,button{font:inherit}select{padding:6px 8px;border:1px solid var(--line);b
 button.pl{background:var(--acc);color:#fff;border:1px solid var(--acc);border-radius:7px;padding:7px 16px;cursor:pointer}@media (prefers-color-scheme:dark){button.pl{color:#08201e}}
 .layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:14px}@media (max-width:980px){.layout{grid-template-columns:1fr}}
 #stage{position:relative;height:470px;border-radius:10px;overflow:hidden;background:#bdd0d3;border:1px solid var(--line);touch-action:none}
-#stage canvas.ov{position:absolute;inset:0;pointer-events:none}
+#stage canvas.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .hud{position:absolute;inset:0;pointer-events:none}
 .chip{position:absolute;left:12px;top:12px;font-weight:700;font-size:15px;padding:4px 12px;border-radius:8px;color:#fff;background:#3fbf7f}
 .hread{position:absolute;right:12px;top:12px;background:rgba(10,20,32,.8);color:#e4edf4;border-radius:8px;padding:8px 12px;line-height:1.45;font-size:13px;font-variant-numeric:tabular-nums}
@@ -53,13 +56,41 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
 <body>
 <main>
 <h1>Ward deployment cases: people, alerts and power</h1>
-<p class="sub">Nine scripted hospital situations for a robot towing a trolley. Each one runs the Chapter 5 safety layer (the six danger states, the alert chain) and the battery power supervisor, so you can watch who is where, what the layer decided, and what the robot did.</p>
-<div class="banner"><strong>These are simulations, not recordings.</strong> The people, their paths and the moments the camera misses them are scripted for each case. The danger ladder, time constants and version differences come from Chapter 5. The robot slowing down in response to alerts is an extension proposed here: the chapter's layer only warns. Switch it off below to see the layer as deployed.</div>
+<p class="sub">Eleven scripted hospital situations for a robot towing a trolley. Each one runs the Chapter 5 safety layer (the six danger states, the alert chain) and the battery power supervisor, so you can watch who is where, what the layer decided, and what the robot did.</p>
+<div class="banner"><strong>These are simulations, not recordings.</strong> The people, their paths and the moments the camera misses them are scripted for each case. The danger ladder, time constants and version differences come from Chapter 5. The robot slowing down in response to alerts, the LiDAR layout, the map and the planner are extensions proposed here: the chapter's layer only warns. Switch them off below to see the layer as deployed.</div>
+<section class="card" id="design">
+ <h2>Sensor layout: what we have and what we propose</h2>
+ <p class="sub">Measured on the Genesis CAD: chassis 666 x 672 mm, deck rim at 175 mm, rear tyres 262 mm, motors 222 mm, and a free bay about 200 mm deep at the front centre. The mast and the towed trolley are not in the CAD, so their sizes are assumptions.</p>
+ <div class="two">
+  <div>
+   <table class="dtab">
+    <tr><th></th><th>Current</th><th>Proposed</th></tr>
+    <tr><td>2D LiDAR</td><td>Used only as a stop sensor inside the robot's lane.</td><td>Front centre, 0.30 m ahead of the chassis middle, on a 90 mm riser so the scan plane sits at 0.29 m. Feeds a SLAM map, leg tracking and the planner.</td></tr>
+    <tr><td>Depth camera</td><td>Top of a 1.28 m mast.</td><td>On a short braced post 0.17 m ahead of the middle, lens at 1.0 m, tilted 12 degrees down.</td></tr>
+    <tr><td>Clear scan</td><td>Not used for awareness.</td><td>316 of 360 degrees. Only the trolley blocks the rear 44 degrees. At 0.29 m the scan clears the tyres and motors and sits at shin height for legs, bed wheels and wheelchair wheels.</td></tr>
+    <tr><td>Why lower the camera</td><td>Sways on a moving robot, catches door frames.</td><td>Stiffer, still sees head and shoulders of a standing adult, and the tilt brings the floor into view from about 1.3 m ahead, which covers what the LiDAR plane misses.</td></tr>
+   </table>
+   <h3>What the LiDAR adds (cases 10 and 11 are new, the others improve)</h3>
+   <ul class="l" id="addons"></ul>
+  </div>
+  <div>
+   <canvas id="cov" width="760" height="470" aria-label="Top view of sensor coverage for the current and proposed layouts"></canvas>
+   <h3>What still needs care</h3>
+   <ul class="l">
+    <li>The rear 44 degrees and everything behind the trolley stay blind: no reversing while towing.</li>
+    <li>Glass is invisible to the LiDAR, so a glass partition is not in the map and cannot veto a camera ghost. Mark glass walls as keep-out zones.</li>
+    <li>Objects lower than 0.29 m in the first 1.3 m ahead rely on the camera tilt and the stop sensor.</li>
+    <li>Everything here is simulated. The LiDAR model, the planner and the SLAM map are simple rules, not a real ROS 2 stack.</li>
+   </ul>
+  </div>
+ </div>
+</section>
 <div class="cards" id="cards"></div>
 
 <section class="card">
  <div class="head"><h2 id="cTitle"></h2><span class="tag" id="cTag"></span></div>
  <div class="opts">
+  <label>Sensor layout<div class="seg" id="segS"></div></label>
   <label>MII version<div class="seg" id="segV"></div></label>
   <label id="lPow" class="hide">Battery power supervisor<div class="seg" id="segP"></div></label>
   <label>Robot motion response<select id="selR"><option value="supervised">Slows or stops for alerts (proposed)</option><option value="alert">Alerts only (as in the chapter)</option></select></label>
@@ -81,6 +112,7 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
    <div class="panel"><h3>People and what the layer sees</h3><table id="ppl"></table></div>
    <div class="panel"><h3>Alert log</h3><div id="log"></div></div>
    <div class="panel"><h3>Robot and battery</h3><div id="rob"></div></div>
+   <div class="panel"><h3>LiDAR map and planned path</h3><canvas id="map" width="560" height="680"></canvas><div class="note" id="mapnote"></div></div>
   </div>
  </div>
 </section>
@@ -94,7 +126,7 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
 
 <section class="card">
  <h2>All nine cases as an acceptance suite</h2>
- <p class="note">Each case is a pass or fail test with a stated criterion. A new version of the safety layer should pass all of them before it goes near a ward. The earlier versions fail exactly the cases that exposed their bugs in the chapter.</p>
+ <p class="note">Each case is a pass or fail test with a stated criterion. A new version of the safety layer should pass all of them before it goes near a ward. The earlier versions fail exactly the cases that exposed their bugs in the chapter. The right-hand block shows the same tests with the proposed LiDAR layout.</p>
  <div style="overflow-x:auto"><table id="suite"></table></div>
 </section>
 
@@ -326,6 +358,15 @@ if(typeof module!=='undefined')module.exports=ShadowCore;
    and the battery power supervisor. All people, detections and misses are scripted, nothing here is recorded footage. */
 const MII=(()=>{
 const C=ShadowCore,DT=.1,CAM=.27,HFOV=40*Math.PI/180,VMAXP=2.0,H_PRED=1.5;
+/* Sensor layouts. Measured on the Genesis CAD: chassis 666 x 672 mm, deck rim 175 mm, rear tyres 262 mm, motors 222 mm, free bay at the front centre. */
+const LID={fwd:.30,h:.29,blind:22*Math.PI/180,range:12,camH:1.0,camFwd:.17,camTilt:12};
+const SENSORS={
+ cam:{id:'cam',name:'Current: camera on 1.28 m mast, LiDAR as a stop sensor only',lidar:false},
+ fused:{id:'fused',name:'Proposed: LiDAR at 0.29 m front, camera at 1.0 m, SLAM map',lidar:true}};
+const rel=(px,pz,ox,oz,yaw)=>{const dx=px-ox,dz=pz-oz,c=Math.cos(yaw),s=Math.sin(yaw);return{X:dx*c-dz*s,Zc:dx*s+dz*c};};
+function routeX(cs,z){const r=cs.route;if(!r)return 0;if(z<=r[0][0])return r[0][1];for(let n=1;n<r.length;n++){if(z<=r[n][0]){const a=r[n-1],b=r[n],f=(z-a[0])/Math.max(1e-6,b[0]-a[0]),u=f*f*(3-2*f);return a[1]+(b[1]-a[1])*u;}}return r[r.length-1][1];}
+function routeYaw(cs,z){const h=.05;return Math.atan2(routeX(cs,z+h)-routeX(cs,z-h),2*h);}
+function footprint(s){if(!s.w)return[[s.x,s.z]];const pts=[];for(let dx=-s.w/2;dx<=s.w/2+1e-6;dx+=.2)for(let dz=-s.l/2;dz<=s.l/2+1e-6;dz+=.2)pts.push([s.x+dx,s.z+dz]);return pts;}
 const VERSIONS={
  v40:{id:'v40',name:'v4.0 (first MII)',bgModel:false,bgTrusted:false,gates:false,adaptive:false,immunity:false,reconfirm:true,warmup:0,buffer:1.0},
  v52:{id:'v52',name:'v5.2 (background model)',bgModel:true,bgTrusted:false,gates:true,adaptive:false,immunity:false,reconfirm:false,warmup:.5,buffer:.27},
@@ -340,67 +381,76 @@ const side=x=>x>.15?'LEFT':x<-.15?'RIGHT':'CENTER';
 function slope(pts){const n=pts.length;if(n<2)return 0;let mt=0,md=0;pts.forEach(q=>{mt+=q[0];md+=q[1];});mt/=n;md/=n;let a=0,b=0;pts.forEach(q=>{a+=(q[0]-mt)*(q[1]-md);b+=(q[0]-mt)**2;});return b>0?a/b:0;}
 
 function simulate(cs,cfg){
- const V=VERSIONS[cfg.version||'v60'],resp=cfg.response||'supervised',powerSup=cfg.powerSup!==false;
+ const V=VERSIONS[cfg.version||'v60'],resp=cfg.response||'supervised',powerSup=cfg.powerSup!==false,SEN=SENSORS[cfg.sensors||'fused'],lidOn=SEN.lidar;
  const prof={...C.DEFAULT,...(cs.profile||{})},lim=C.limits(prof.cells),mass=prof.mass+(cs.payload||0);
  const S={tracks:new Map()},events=[],samples=[],plan=cs.plan||{startT:0,goalZ:0};
- let z=cs.z0||0,v=0,soc=cs.soc??.8,t=0,dead=false,deadT=null,lossS=0,vt=C.ocv(soc,prof.cells),it=0,minV=Infinity;
+ let yielding=false,yieldUntil=-1,yieldV=Infinity,z=cs.z0||0,v=0,soc=cs.soc??.8,t=0,dead=false,deadT=null,lossS=0,vt=C.ocv(soc,prof.cells),it=0,minV=Infinity;
  const R=prof.resistance,sup=new C.PowerSupervisor(prof,{rOnline:false});
- const alert=(t0,tr,rank,text,type='alert')=>events.push({t:+t0.toFixed(2),key:tr.key,pid:tr.pid,rank,text,type,fake:!tr.person||tr.ghost});
- const fi=cs.frameInterval||0;let nextFrame=0,lastMii=null;const m={minDist:Infinity,stopS:0,ghostStopS:0,unalertedS:0,minV:Infinity,deadT:null,deadZ:null,firstAlert:null,firstClose:null,alerts:0,falseAlerts:0,arrivalT:null,trackFlicker:0};
+ const alert=(t0,tr,rank,text,type='alert')=>events.push({t:+t0.toFixed(2),key:tr.key,pid:tr.pid,rank,text,type,fake:!tr.person||tr.ghost,d:tr.d,src:tr.src});
+ const fi=cs.frameInterval||0;let nextFrame=0,lastMii=null;const m={minDist:Infinity,stopS:0,ghostStopS:0,unalertedS:0,minV:Infinity,deadT:null,deadZ:null,firstAlert:null,firstAlertD:null,firstClose:null,entrySpeed:null,alerts:0,falseAlerts:0,arrivalT:null,trackFlicker:0,lidarOnlyAlerts:0};
  const steps=Math.round(cs.duration/DT);
  for(let n=0;n<=steps;n++){t=n*DT;
-  const people=cs.people||[],camZ=z+CAM,pos=people.map(p=>posAt(p,t));
+  const people=cs.people||[],pos=people.map(p=>posAt(p,t));
+  const x=lidOn?routeX(cs,z):0,yaw=lidOn?routeYaw(cs,z):0,fx=Math.sin(yaw),fz=Math.cos(yaw),camX=x+fx*CAM,camZ=z+fz*CAM,lidX=x+fx*LID.fwd,lidZ=z+fz*LID.fwd;
+  const lidSee=(px,pz)=>{if(!lidOn)return null;const r=rel(px,pz,lidX,lidZ,yaw),d=Math.hypot(r.X,r.Zc);return(Math.abs(Math.atan2(r.X,r.Zc))<Math.PI-LID.blind&&d<LID.range&&d>.1)?{...r,d}:null;};
   let nYolo=0,rejected=[];
   /* ---------- MII frame ---------- */
-  if(!dead&&t>=nextFrame-1e-9){const dtF=lastMii?t-lastMii:DT;lastMii=t;nextFrame=fi?t+fi:t;
+  const camDue=!dead&&t>=nextFrame-1e-9;if(camDue){nextFrame=fi?t+fi:t;}
+  if(camDue||(!dead&&lidOn)){
    const dets=[],fbs=[],pst={};
-   people.forEach((p,k)=>{const X=pos[k].x,Zc=pos[k].z-camZ,d=Math.hypot(X,Zc),inF=Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d<7;if(!inF){pst[p.id]='out of camera view';return;}
-    const miss=cs.dark||inWin(p.miss,t)||d<.3,k0=p.keys[0],learned=V.bgModel&&!V.bgTrusted&&p.startup&&Math.hypot(pos[k].x-k0[1],pos[k].z-k0[2])<.25;
-    pst[p.id]='tracked by YOLO';if(!miss&&d<=6){if(learned){rejected.push({p,X,Zc,d,why:'G2 background match'});pst[p.id]='rejected as background (G2 gate)';}else{dets.push({p,X,Zc,d,pos:pos[k]});nYolo++;}}
-    else{pst[p.id]=(cs.dark?'RGB detector blind (dark)':d<.3?'too close for the detector':'detector miss');if(d>=.15&&d<=.9&&!learned){fbs.push({key:'F'+p.id,person:true,id:p.id,X,Zc,d});pst[p.id]+=', depth fallback';}}});
-   (cs.statics||[]).forEach(s=>{if(!s.solid)return;const X=s.x,Zc=s.z-camZ,d=Math.hypot(X,Zc);if(Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d>=.15&&d<=.9&&(!V.bgModel||t<V.warmup))fbs.push({key:'F'+s.id,person:false,id:s.id,X,Zc,d});});
+   people.forEach((p,k)=>{const rc=rel(pos[k].x,pos[k].z,camX,camZ,yaw),X=rc.X,Zc=rc.Zc,d=Math.hypot(X,Zc),inF=Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d<7,L=lidSee(pos[k].x,pos[k].z);let camDet=false;
+    if(!inF)pst[p.id]='out of camera view';else if(!camDue)pst[p.id]='between camera frames';
+    else{const miss=cs.dark||inWin(p.miss,t)||d<.3,k0=p.keys[0],learned=V.bgModel&&!V.bgTrusted&&p.startup&&Math.hypot(pos[k].x-k0[1],pos[k].z-k0[2])<.25;
+     pst[p.id]='tracked by YOLO';if(!miss&&d<=6){if(learned){if(L)pst[p.id]='camera rejected her as background (G2), LiDAR legs overrule';else{rejected.push({p,X,Zc,d,why:'G2 background match'});pst[p.id]='rejected as background (G2 gate)';}}else{dets.push({p,X,Zc,d,pos:pos[k],src:L?'both':'camera'});nYolo++;camDet=true;}}
+     else{pst[p.id]=(cs.dark?'RGB detector blind (dark)':d<.3?'too close for the detector':'detector miss');if(d>=.15&&d<=.9&&!learned&&!L){fbs.push({key:'F'+p.id,person:true,id:p.id,X,Zc,d});pst[p.id]+=', depth fallback';}}}
+    if(L&&!camDet){dets.push({p,X:L.X,Zc:L.Zc,d:L.d,pos:pos[k],src:'lidar'});pst[p.id]+=', LiDAR legs track';}else if(L&&camDet)pst[p.id]+=' + LiDAR legs';else if(lidOn&&!L)pst[p.id]+=' (in LiDAR blind sector)';});
+   if(camDue)(cs.statics||[]).forEach(s=>{if(!s.solid)return;const rc=rel(s.x,s.z,camX,camZ,yaw),X=rc.X,Zc=rc.Zc,d=Math.hypot(X,Zc);if(Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d>=.15&&d<=.9&&(!V.bgModel||t<V.warmup)){if(lidOn&&s.kind!=='glass')rejected.push({p:{id:s.id},X,Zc,d,why:'LiDAR map: static object, not a person'});else fbs.push({key:'F'+s.id,person:false,id:s.id,X,Zc,d});}});
    const enc=dets.some(q=>q.d<1.5&&q.X>.2)&&dets.some(q=>q.d<1.5&&q.X<-.2),seen=new Set();
    for(const q of dets){const key='T'+q.p.id;seen.add(key);let tr=S.tracks.get(key);
-    if(tr&&V.reconfirm&&q.p.ghost&&t>=q.p.ghost[0]&&t<=q.p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;pst[q.p.id]='left, ghost track kept alive';continue;}if(!tr){tr={key,pid:q.p.id,kind:'yolo',person:true,firstT:t,hist:[],rank:0,lowSince:null,r5Since:null,lastAlert:-1e9,trig:0,mature:false,lastSeen:t,dLast:null,ghost:false,muted:false,label:''};S.tracks.set(key,tr);}
+    if(tr&&V.reconfirm&&!lidOn&&q.p.ghost&&t>=q.p.ghost[0]&&t<=q.p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;pst[q.p.id]='left, ghost track kept alive';continue;}if(!tr){tr={key,pid:q.p.id,kind:'yolo',person:true,firstT:t,hist:[],rank:0,lowSince:null,r5Since:null,lastAlert:-1e9,trig:0,mature:false,lastSeen:t,dLast:null,ghost:false,muted:false,label:'',src:q.src};S.tracks.set(key,tr);}
+    tr.src=q.src;
     const dtp=t-tr.lastSeen,jump=tr.dLast==null?0:Math.abs(q.d-tr.dLast),thr=V.adaptive?Math.max(.4,VMAXP*dtp):.4;
-    if(V.gates&&!(V.immunity&&tr.mature)&&jump>thr){if(!V.adaptive){tr.firstT=t;tr.mature=false;tr.hist=[];tr.rank=0;tr.lowSince=null;tr.r5Since=null;m.trackFlicker++;}tr.dLast=q.d;tr.lastSeen=t;tr.gated=true;pst[q.p.id]='track reset by depth-jump gate';continue;}
+    if(V.gates&&q.src!=='lidar'&&!(V.immunity&&tr.mature)&&jump>thr){if(!V.adaptive){tr.firstT=t;tr.mature=false;tr.hist=[];tr.rank=0;tr.lowSince=null;tr.r5Since=null;m.trackFlicker++;}tr.dLast=q.d;tr.lastSeen=t;tr.gated=true;pst[q.p.id]='track reset by depth-jump gate';continue;}
     tr.gated=false;pst[q.p.id]='tracked by YOLO'+(tr.mature?' (mature)':'');tr.mature=t-tr.firstT>=.15;tr.hist.push({t,x:q.pos.x,z:q.pos.z});while(tr.hist.length>1&&(t-tr.hist[0].t>.6&&tr.hist.length>2||tr.hist.length>8))tr.hist.shift();
     tr.dLast=q.d;tr.lastSeen=t;tr.ghost=false;tr.d=q.d;tr.X=q.X;tr.Zc=q.Zc;
-    const vz=-slope(tr.hist.map(h=>[h.t,Math.hypot(h.x,h.z-camZ)])),dp=q.d-vz*H_PRED;tr.vz=vz;
+    const vz=-slope(tr.hist.map(h=>{const r=rel(h.x,h.z,camX,camZ,yaw);return[h.t,Math.hypot(r.X,r.Zc)];})),dp=q.d-vz*H_PRED;tr.vz=vz;
     let raw=0;if(q.d<1)raw=5;else if(q.d<1.5&&(vz>.7||enc))raw=4;else if(q.d<1.5)raw=3;else if(dp<1&&vz>.3)raw=2;else if(vz>.7&&q.d<3)raw=1;
-    if(tr.trig>=3&&raw>=2)raw=5;tr.raw=raw;tr.label='ID:'+tr.pid+' '+RANKS[raw]+' '+side(q.X)+' '+q.d.toFixed(2)+'m';}
+    if(tr.trig>=3&&raw>=2)raw=5;tr.raw=raw;tr.label='ID:'+tr.pid+' '+RANKS[raw]+' '+side(q.X)+' '+q.d.toFixed(2)+'m'+(q.src==='lidar'?' (LiDAR)':'');}
    /* fallback (depth-change) tracks */
    const fseen=new Set();for(const f of fbs){fseen.add(f.key);let tr=S.tracks.get(f.key);if(!tr){tr={key:f.key,pid:f.id,kind:'fallback',person:f.person,firstT:t,hist:[],rank:0,lowSince:null,r5Since:null,lastAlert:-1e9,trig:0,mature:true,lastSeen:t,ghost:false,muted:false};S.tracks.set(f.key,tr);}
     tr.lastSeen=t;tr.d=f.d;tr.X=f.X;tr.Zc=f.Zc;tr.vz=0;tr.raw=5;tr.label='PERSON '+side(f.X)+' '+f.d.toFixed(2)+'m';}
    /* lost tracks, ghost loop */
    for(const [key,tr] of [...S.tracks]){if(seen.has(key)||fseen.has(key))continue;const p=(cs.people||[]).find(q=>'T'+q.id===key);
-    if(tr.kind==='yolo'&&V.reconfirm&&p&&p.ghost&&t>=p.ghost[0]&&t<=p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;continue;}
+    if(tr.kind==='yolo'&&V.reconfirm&&!lidOn&&p&&p.ghost&&t>=p.ghost[0]&&t<=p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;continue;}
     const lost=t-tr.lastSeen,keep=tr.kind==='fallback'?.5:V.buffer;if(lost>keep){S.tracks.delete(key);}else if(tr.kind==='fallback')tr.raw=0;else tr.raw=tr.rank;}
    /* state machine, alerts */
    for(const tr of S.tracks.values()){if(tr.gated&&!tr.rank)continue;const raw=tr.raw??0;
     if(raw>=tr.rank){if(raw>tr.rank){const was=tr.rank;tr.rank=raw;if(was<2&&raw>=2)tr.trig++;if(raw>=1&&raw<5)alert(t,tr,raw,SPEECH[raw]);if(raw===5){tr.r5Since=t;tr.lastAlert=t;alert(t,tr,5,'Move away immediately');}}tr.lowSince=null;}
     else{if(tr.lowSince==null)tr.lowSince=t;if(t-tr.lowSince>=.5-1e-9){if(tr.rank===5){tr.r5Since=null;tr.muted=false;}tr.rank=raw;tr.lowSince=null;}}
     if(tr.rank===5&&tr.r5Since!=null&&t-tr.lastAlert>=15-1e-9){const ph=t-tr.r5Since;tr.lastAlert=t;if(ph<45)alert(t,tr,5,'Move away immediately');else if(ph<75)alert(t,tr,5,'Please clear the path');else if(!tr.muted){tr.muted=true;alert(t,tr,5,'Audio muted, visual indicator only','visual');}}}
-   lastMii={t,tracks:[...S.tracks.values()].map(tr=>({key:tr.key,pid:tr.pid,kind:tr.kind,rank:tr.rank,d:tr.d,vz:tr.vz||0,label:tr.label||'',ghost:tr.ghost,person:tr.person,mature:tr.mature,X:tr.X,Zc:tr.Zc})),nYolo,pst,rejected:rejected.map(r=>({pid:r.p.id,d:r.d,X:r.X,Zc:r.Zc,why:r.why}))};}
+   lastMii={t,tracks:[...S.tracks.values()].map(tr=>({key:tr.key,pid:tr.pid,kind:tr.kind,src:tr.src||'camera',rank:tr.rank,d:tr.d,vz:tr.vz||0,label:tr.label||'',ghost:tr.ghost,person:tr.person,mature:tr.mature,X:tr.X,Zc:tr.Zc})),nYolo,pst,rejected:rejected.map(r=>({pid:r.p.id,d:r.d,X:r.X,Zc:r.Zc,why:r.why}))};}
   /* ---------- robot ---------- */
   const mii=lastMii||{tracks:[],nYolo:0,pst:{},rejected:[]};let worst=0;for(const tr of mii.tracks)worst=Math.max(worst,tr.rank);
   let vnav=0;if(t>=plan.startT)vnav=Math.min(prof.vmax,Math.sqrt(Math.max(0,2*prof.dec*(plan.goalZ-z))));
-  let vlid=Infinity;const obst=[];people.forEach((p,k)=>obst.push([pos[k].x,pos[k].z]));(cs.statics||[]).forEach(s=>{if(s.solid)obst.push([s.x,s.z]);});
-  for(const [ox,oz] of obst){const Zc=oz-camZ;if(Math.abs(ox)<.55&&Zc>0)vlid=Math.min(vlid,Math.sqrt(2*1.5*Math.max(0,Zc-.35)));}
-  let target=Math.min(vnav,vlid),cap=Infinity;if(resp==='supervised'&&!dead){cap=CAP[worst];target=Math.min(target,cap);}
-  const dec=vlid<vnav?1.5:prof.dec;let wanted=clamp(target,v-dec*DT,v+prof.acc*DT),supState='ok',pcap=C.powerCap(C.ocv(soc,prof.cells),R,prof.imax,lim.guard);
+  let vlid=Infinity;const obst=[];people.forEach((p,k)=>obst.push([pos[k].x,pos[k].z]));(cs.statics||[]).forEach(s=>{if(s.solid)footprint(s).forEach(q=>obst.push(q));});
+  for(const [ox,oz] of obst){const r=rel(ox,oz,camX,camZ,yaw);if(Math.abs(r.X)<.55&&r.Zc>0)vlid=Math.min(vlid,Math.sqrt(2*1.5*Math.max(0,r.Zc-.35)));}
+  let vplan=Infinity,yieldWhy=null;if(lidOn&&t>=plan.startT){people.forEach((p,k)=>{if(!lidSee(pos[k].x,pos[k].z))return;const q0=posAt(p,t-DT),vx=(pos[k].x-q0.x)/DT,vz=(pos[k].z-q0.z)/DT;if(Math.hypot(vx,vz)<.2)return;
+    for(let tau=0;tau<=3;tau+=.25){const r=rel(pos[k].x+vx*tau,pos[k].z+vz*tau,camX,camZ,yaw);if(Math.abs(r.X)<.9&&r.Zc>-.3&&r.Zc<6){vplan=Math.min(vplan,r.Zc<2.2?.15:.3);yieldWhy=yieldWhy||p;break;}}});}
+  if(yieldWhy){if(!yielding)events.push({t:+t.toFixed(2),key:'nav',pid:yieldWhy.id,rank:0,text:'Planner yields: '+yieldWhy.kind+' '+yieldWhy.id+' is walking into the planned path',type:'nav',fake:false});yieldUntil=t+1.0;yieldV=vplan;}else if(t<yieldUntil)vplan=yieldV;yielding=t<yieldUntil;
+  let target=Math.min(vnav,vlid,vplan),cap=Infinity;if(resp==='supervised'&&!dead){cap=CAP[worst];target=Math.min(target,cap);}
+  const dec=vlid<vnav?1.5:vplan<vnav?1.0:prof.dec;let wanted=clamp(target,v-dec*DT,v+prof.acc*DT),supState='ok',pcap=C.powerCap(C.ocv(soc,prof.cells),R,prof.imax,lim.guard);
   if(!dead&&powerSup){if(n===0){sup.voc=C.ocv(soc,prof.cells);sup.tSample=t;}const d=sup.decide(t,wanted,v,DT,cs.payload||0);supState=d.state;pcap=d.powerCap;if(d.state==='park')wanted=0;else if(d.speedLimit<wanted)wanted=Math.max(0,d.speedLimit);}
   if(dead)wanted=0;
   const gr=(cs.grade||[]).reduce((a,[z0,z1,g])=>z>=z0&&z<=z1?a+g:a,0),P=C.drawPower(wanted,(wanted-v)/DT,mass,prof)+mass*9.81*gr*Math.max(0,wanted)/prof.eta,e=C.supply(P,C.ocv(soc,prof.cells),R);
   if(!dead){vt=e.v;it=e.i;minV=Math.min(minV,vt);soc=Math.max(0,soc-e.i*DT/(prof.capacity_ah*3600));if(vt<lim.vmin||e.collapse){lossS+=DT;if(lossS>=.3-1e-9){dead=true;deadT=t;m.deadT=t;m.deadZ=z;events.push({t:+t.toFixed(2),key:'power',pid:0,rank:0,text:'Supply loss: pack voltage fell below '+lim.vmin.toFixed(1)+' V',type:'power',fake:false});}}else lossS=0;if(powerSup)sup.update(t,vt,it);}
   v=dead?0:wanted;
-  samples.push({t,z,v,vnav,vlid:isFinite(vlid)?vlid:null,cap:isFinite(cap)?cap:null,vt,it,soc,pcap,supState,dead,worst,ppl:pos.map((q,k)=>({id:people[k].id,x:q.x,z:q.z})),mii});
+  samples.push({t,z,x,yaw,lidar:lidOn,yielding,vplan:isFinite(vplan)?vplan:null,v,vnav,vlid:isFinite(vlid)?vlid:null,cap:isFinite(cap)?cap:null,vt,it,soc,pcap,supState,dead,worst,ppl:pos.map((q,k)=>({id:people[k].id,x:q.x,z:q.z})),mii});
   /* metrics */
-  people.forEach((p,k)=>{const d=Math.hypot(pos[k].x,pos[k].z-camZ),Zc=pos[k].z-camZ;if(Zc>0&&Math.abs(pos[k].x)<2)m.minDist=Math.min(m.minDist,d);
-   if(d<1.5&&Zc>.05&&Math.abs(Math.atan2(pos[k].x,Zc))<HFOV){if(m.firstClose==null)m.firstClose=t;const alerted=mii.tracks.some(tr=>tr.person&&String(tr.pid)===String(p.id)&&tr.rank>=3&&!tr.ghost);if(!alerted)m.unalertedS+=DT;}});
+  people.forEach((p,k)=>{const rc=rel(pos[k].x,pos[k].z,camX,camZ,yaw),d=Math.hypot(rc.X,rc.Zc),Zc=rc.Zc;if(Zc>0&&Math.abs(rc.X)<2)m.minDist=Math.min(m.minDist,d);if(m.entrySpeed==null&&Math.abs(rc.X)<.55&&Zc>0&&Zc<3&&t>=plan.startT&&(plan.goalZ-z)>.5)m.entrySpeed=v;
+   if(d<1.5&&Zc>.05&&Math.abs(Math.atan2(rc.X,Zc))<HFOV){if(m.firstClose==null)m.firstClose=t;const alerted=mii.tracks.some(tr=>tr.person&&String(tr.pid)===String(p.id)&&tr.rank>=3&&!tr.ghost);if(!alerted)m.unalertedS+=DT;}});
   if(v<.02&&t>=plan.startT&&(plan.goalZ-z)>.3){m.stopS+=DT;if(mii.tracks.some(tr=>tr.rank>=4&&(tr.ghost||!tr.person)))m.ghostStopS+=DT;}
   z+=v*DT;if(m.arrivalT==null&&plan.goalZ>0&&z>=plan.goalZ-.05)m.arrivalT=t;}
- const al=events.filter(e=>e.type==='alert');m.alerts=al.length;m.falseAlerts=al.filter(e=>e.fake).length;const fa=al.find(e=>!e.fake);m.firstAlert=fa?fa.t:null;m.minV=minV;m.finalZ=z;m.dead=dead;
+ const al=events.filter(e=>e.type==='alert');m.alerts=al.length;m.falseAlerts=al.filter(e=>e.fake).length;const fa=al.find(e=>!e.fake);m.firstAlert=fa?fa.t:null;m.firstAlertD=fa?fa.d:null;m.lidarOnlyAlerts=al.filter(e=>!e.fake&&e.src==='lidar').length;m.minV=minV;m.finalZ=z;m.dead=dead;
  return{samples,events,metrics:m,cfg,V};}
 
 /* ---------------- the cases ---------------- */
@@ -452,8 +502,19 @@ const CASES=[
  payload:140,soc:.36,profile:{resistance:.23},grade:[[20,38,.04]],
  people:[walk(1,'visitor',[[0,1.75,8],[4,1.75,8],[6.5,.2,8],[14,.2,8],[17,-1.7,8.2],[40,-1.7,8.2]]),walk(2,'visitor',[[0,-1.75,18],[14,-1.75,18],[17,-.2,18],[25,-.2,18],[28,1.7,18.2],[50,1.7,18.2]]),walk(3,'visitor',[[0,1.75,28],[24,1.75,28],[27,.2,28],[36,.2,28],[39,-1.7,28.2],[60,-1.7,28.2]])],statics:[],plan:{startT:1,goalZ:38},duration:110,
  pass:(m)=>({ok:!m.dead&&m.arrivalT!=null,why:m.dead?'Supply loss at '+m.deadT.toFixed(0)+' s, '+m.deadZ.toFixed(0)+' m along the corridor. The robot stopped for good in the lane.':m.arrivalT!=null?'Arrived at '+m.arrivalT.toFixed(0)+' s with minimum '+m.minV.toFixed(1)+' V.':'Did not arrive.'})}
+
+,{id:'J',n:10,tag:'lidar',title:'Side approach: a visitor comes out of a door beside the robot',
+ story:'A visitor waits in a doorway to the robot\'s left, outside the camera\'s 80 degree view, and steps into the lane when the robot is two metres away. With the camera alone the person appears at 1.5 m and the first warning is a shout. With the front LiDAR their legs are tracked from the doorway onwards and the planner sees them walking into its path, so the robot is already crawling when they step out.',
+ chapter:'Add-on: the camera sees 80 degrees ahead; the LiDAR at 0.29 m covers 316 degrees and reports people before the camera can.',
+ people:[walk(1,'visitor',[[0,-1.85,13],[17,-1.85,13],[20.5,1.6,13.3],[60,1.6,13.3]])],statics:[],plan:{startT:1,goalZ:30},duration:60,
+ pass:(m)=>({ok:m.entrySpeed!=null&&m.entrySpeed<=.32&&m.minDist>.45,why:m.entrySpeed==null?'The visitor never entered the lane.':m.entrySpeed<=.32?'Robot had already slowed to '+m.entrySpeed.toFixed(2)+' m/s when the visitor stepped into the lane; kept '+m.minDist.toFixed(2)+' m clear.':'Robot was still doing '+m.entrySpeed.toFixed(2)+' m/s when the visitor stepped into the lane; the first warning came at '+(m.firstAlertD||0).toFixed(1)+' m.'})},
+{id:'K',n:11,tag:'lidar',title:'A parked bed blocks half the corridor',
+ story:'A bed has been left along the right wall and a nurse stands further on. Today the LiDAR is only a stop sensor: the robot halts 0.35 m from the bed and waits forever. With the LiDAR mapping the corridor (SLAM) the navigation stack plans a detour around the bed, keeps the nurse at a safe distance, and arrives.',
+ chapter:'Add-on: a map and a planner. The safety layer and the power supervisor keep running on top of the planned path.',
+ people:[walk(1,'nurse',[[0,1.6,21]])],statics:[{id:'bed',kind:'bed',x:1.0,z:15,w:.95,l:2.1,solid:true}],route:[[10,0],[12.5,-1.05],[17,-1.05],[19.5,0]],plan:{startT:1,goalZ:30},duration:70,
+ pass:(m)=>({ok:m.arrivalT!=null&&m.falseAlerts===0,why:m.arrivalT!=null?'Detoured around the bed and arrived at '+m.arrivalT.toFixed(0)+' s.':'Stopped in front of the bed and never arrived (no map, no detour).'})}
 ];
-return{simulate,CASES,VERSIONS,RANKS,CAP,posAt,DT};
+return{simulate,CASES,VERSIONS,SENSORS,LID,RANKS,CAP,posAt,routeX,routeYaw,footprint,DT};
 })();
 if(typeof module!=='undefined')module.exports=MII;
 
@@ -461,8 +522,8 @@ if(typeof module!=='undefined')module.exports=MII;
 <script>
 (()=>{
 const C=ShadowCore,M=MII,$=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const RC=['#3fbf7f','#e6c34a','#f0a73a','#ee7c33','#e0453a','#ff2d55'],RN=M.RANKS,TAGN={people:'People',failure:'Failure fixed in v6.0',power:'People and power'};
-const S={cs:M.CASES[0],cfg:{version:'v60',response:'supervised',powerSup:true},sim:null,T:0,playing:false,last:0,logN:-1,cache:{}};
+const RC=['#3fbf7f','#e6c34a','#f0a73a','#ee7c33','#e0453a','#ff2d55'],RN=M.RANKS,TAGN={people:'People',failure:'Failure fixed in v6.0',power:'People and power',lidar:'LiDAR add-on'},LID=M.LID,TEAL='#1fb5a8';
+const S={cs:M.CASES[0],cfg:{version:'v60',response:'supervised',powerSup:true,sensors:'fused'},sim:null,T:0,playing:false,last:0,logN:-1,cache:{}};
 const sim=(cs,cfg)=>{const k=cs.id+JSON.stringify(cfg);return S.cache[k]||(S.cache[k]=M.simulate(cs,cfg));};
 /* ---------------- 3D ---------------- */
 const G={inited:false,ok:false,angle:.5,zoom:6,people:[],statics:[],world:null,rings:[]};
@@ -481,7 +542,19 @@ function ensure3D(){if(G.inited)return G.ok;G.inited=true;if(typeof THREE==='und
  for(const d of data){const nm=d.name.toLowerCase(),metal=/chassis|axle|rod|tube|pin|sprocket|rim|hub|frame|clamp|cap|bridge|tray/.test(nm),rubber=/tyre|rollers/.test(nm);
   const m=new T.MeshStandardMaterial({color:new T.Color().setRGB(d.color[0],d.color[1],d.color[2]),metalness:metal?.55:.05,roughness:rubber?.85:metal?.42:.6});const mesh=new T.Mesh(partGeometry(T,d),m);mesh.position.set(d.pivot[0],d.pivot[1],d.pivot[2]);mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);
   if(d.spin)rig.wheels[d.spin].push(mesh);if(d.role==='battery')rig.battery.push(mesh);if(d.role==='driver')rig.drivers.push(mesh);if(d.role==='fuse')rig.fuse.push(mesh);}
- const mast=mat('#8a9ba3',.4,.5);cyl(g,.022,1.1,0,.73,.22,mast);box(g,.23,.07,.055,0,1.28,.25,X.dark);sph(g,.018,-.07,1.28,.282,X.blue);sph(g,.018,.07,1.28,.282,X.blue);
+ const mast=mat('#8a9ba3',.4,.5),mg=G.mastGrp=new T.Group();g.add(mg);cyl(mg,.022,1.1,0,.73,.22,mast);box(mg,.23,.07,.055,0,1.28,.25,X.dark);sph(mg,.018,-.07,1.28,.282,X.blue);sph(mg,.018,.07,1.28,.282,X.blue);
+ const pg=G.propGrp=new T.Group();g.add(pg);
+ /* LiDAR: riser in the free front bay, puck with its scan plane at 0.29 m */
+ cyl(pg,.03,.07,0,.21,LID.fwd,X.metal);cyl(pg,.038,.045,0,.268,LID.fwd,X.dark);const lens=new T.Mesh(new T.CylinderGeometry(.039,.039,.012,24,1,true),new T.MeshStandardMaterial({color:'#1fb5a8',emissive:'#1fb5a8',emissiveIntensity:.8,side:T.DoubleSide}));lens.position.set(0,LID.h,LID.fwd);pg.add(lens);
+ /* short braced post with the depth camera at 1.0 m, tilted down */
+ box(pg,.12,.012,.12,0,.181,LID.camFwd,X.metal);cyl(pg,.018,LID.camH-.18,0,(LID.camH+.18)/2,LID.camFwd,mast);
+ for(const sd of [-1,1]){const br=cyl(pg,.008,.5,0,0,0,mast);br.position.set(sd*.07,.42,LID.camFwd-.03);br.rotation.z=sd*.3;br.rotation.x=-.1;}
+ const head=new T.Group();head.position.set(0,LID.camH,LID.camFwd);head.rotation.x=LID.camTilt*Math.PI/180;pg.add(head);box(head,.11,.03,.03,0,0,.015,X.dark);sph(head,.011,-.035,0,.032,X.blue);sph(head,.011,.035,0,.032,X.blue);
+ /* blind sector behind the LiDAR, drawn on the floor and attached to the robot */
+ {const b=LID.blind,n=16,v=[0,.028,LID.fwd];for(let i=0;i<=n;i++){const a=Math.PI-b+2*b*i/n;v.push(Math.sin(a)*2.6,.028,LID.fwd+Math.cos(a)*2.6);}const idx=[];for(let i=1;i<=n;i++)idx.push(0,i,i+1);const ge=new T.BufferGeometry();ge.setAttribute('position',new T.Float32BufferAttribute(v,3));ge.setIndex(idx);G.blind=new T.Mesh(ge,new T.MeshBasicMaterial({color:'#ff2d55',transparent:true,opacity:.22,side:T.DoubleSide,depthWrite:false,toneMapped:false}));pg.add(G.blind);}
+ /* scan rays, world space */
+ {G.NR=80;const ge=new T.BufferGeometry();ge.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(G.NR*6),3));G.rays=new T.LineSegments(ge,new T.LineBasicMaterial({color:'#1fb5a8',transparent:true,opacity:.55,toneMapped:false}));G.rays.frustumCulled=false;sc.add(G.rays);
+  const pe=new T.BufferGeometry();pe.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(G.NR*3),3));G.hits=new T.Points(pe,new T.PointsMaterial({color:'#9ff5ec',size:.06,toneMapped:false}));G.hits.frustumCulled=false;sc.add(G.hits);}
  const cz=-.98;box(g,.035,.05,.42,0,.13,-.39,X.metal);box(g,.7,.08,.8,0,.32,cz,X.metal);G.trolley=box(g,.62,.6,.67,0,.66,cz,X.shell);box(g,.64,.08,.69,0,.99,cz,X.blue);
  for(const x of [-.28,.28])for(const dz of [-.27,.27]){const w=cyl(g,.07,.055,x,.12,cz+dz,X.dark);w.rotation.z=Math.PI/2;}
  const zmat=(c,o)=>new T.MeshBasicMaterial({color:c,transparent:true,opacity:o,side:T.DoubleSide,depthWrite:false,toneMapped:false,fog:false});
@@ -498,6 +571,7 @@ function makeHuman(kind){const T=THREE,{M:X,box,sph,cyl}=G,grp=new T.Group(),hip
 function makeStatic(s){const T=THREE,{M:X,box,cyl,sph}=G,g=new T.Group();g.position.set(s.x,0,s.z);
  if(s.kind==='desk'){box(g,.95,.05,.5,0,.76,0,X.wood);box(g,.9,.7,.04,0,.38,.2,X.wood);box(g,.05,.7,.45,-.42,.38,0,X.wood);box(g,.05,.7,.45,.42,.38,0,X.wood);box(g,.3,.22,.04,0,1.0,-.1,X.dark);}
  else if(s.kind==='glass'){box(g,1.1,1.3,.025,0,.9,0,X.glass);box(g,1.12,.04,.04,0,.25,0,X.metal);box(g,1.12,.04,.04,0,1.55,0,X.metal);}
+ else if(s.kind==='bed'){const w=s.w||.95,l=s.l||2.1;box(g,w,.18,l,0,.56,0,X.shell);box(g,w-.06,.1,l-.1,0,.7,0,X.gown);box(g,w,.06,l,0,.44,0,X.metal);box(g,w,.5,.04,0,.75,-l/2,X.trim);box(g,w,.35,.04,0,.68,l/2,X.trim);for(const dx of [-1,1])for(const dz of [-1,1]){const wh=cyl(g,.06,.04,dx*(w/2-.06),.06,dz*(l/2-.15),X.dark);wh.rotation.z=Math.PI/2;cyl(g,.015,.35,dx*(w/2-.06),.26,dz*(l/2-.15),X.metal);}}
  else if(s.kind==='ivpole'){cyl(g,.018,1.8,0,.9,0,X.metal);for(const a of [0,2.1,4.2])box(g,.3,.025,.03,Math.cos(a)*.13,.03,Math.sin(a)*.13,X.metal);box(g,.4,.03,.04,0,1.8,0,X.metal);sph(g,.08,0,1.65,0,X.glass,[1,1.5,.7]);}
  return g;}
 function buildWorld(len){const T=THREE,{scene,M:X,box,cyl,sph}=G;if(G.world){scene.remove(G.world);G.world.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
@@ -509,57 +583,87 @@ function buildWorld(len){const T=THREE,{scene,M:X,box,cyl,sph}=G;if(G.world){sce
 function loadScene(){const T=THREE,cs=S.cs;buildWorld(46);G.people.forEach(p=>G.scene.remove(p.grp));G.people=cs.people.map(p=>{const h=makeHuman(p.kind);G.scene.add(h.grp);h.id=p.id;return h;});
  (cs.statics||[]).forEach(s=>{const o=makeStatic(s);G.world.add(o);G.statics.push(o);});
  const dk=!!cs.dark,sc=G.scene;sc.background=new T.Color(dk?'#0b1218':'#bdd0d3');G.fog.color.set(dk?'#0b1218':'#bdd0d3');G.fog.near=dk?6:25;G.fog.far=dk?26:65;G.hemi.intensity=dk?.22:.7;G.light.intensity=dk?.18:1;$('stage').style.background=dk?'#0b1218':'#bdd0d3';}
+function hitDist(ox,oz,a,ppl,statics,withPeople){const sx=Math.sin(a),cz=Math.cos(a);let best=LID.range,what=null;const take=(t,w)=>{if(t>.05&&t<best){best=t;what=w;}};
+ if(Math.abs(sx)>1e-6)for(const wx of [-1.94,1.94]){const t=(wx-ox)/sx;if(t>0){const z=oz+cz*t;if(z>-5&&z<46)take(t,'wall');}}
+ if(cz>1e-6)take((46-oz)/cz,'wall');if(cz<-1e-6)take((-5-oz)/cz,'wall');
+ const circ=(cx,czz,r,w)=>{const fx=ox-cx,fz=oz-czz,b=fx*sx+fz*cz,c=fx*fx+fz*fz-r*r,disc=b*b-c;if(disc<0)return;const t=-b-Math.sqrt(disc);take(t,w);};
+ for(const st of statics||[]){if(!st.solid||st.kind==='glass')continue;if(st.w){const x0=st.x-st.w/2,x1=st.x+st.w/2,z0=st.z-st.l/2,z1=st.z+st.l/2;let tmin=-1e9,tmax=1e9;for(const [o,d,lo,hi] of [[ox,sx,x0,x1],[oz,cz,z0,z1]]){if(Math.abs(d)<1e-9){if(o<lo||o>hi){tmin=1e9;break;}continue;}let ta=(lo-o)/d,tb=(hi-o)/d;if(ta>tb)[ta,tb]=[tb,ta];tmin=Math.max(tmin,ta);tmax=Math.min(tmax,tb);}if(tmin<=tmax&&tmax>0)take(Math.max(tmin,0),'static');}
+  else circ(st.x,st.z,st.kind==='desk'?.48:st.kind==='ivpole'?.1:.3,'static');}
+ if(withPeople)for(const p of ppl||[])circ(p.x,p.z,.18,'person');
+ return{t:best,what};}
 const socCol=soc=>{const T=THREE,f=Math.max(0,Math.min(1,(soc-.1)/.45)),r=new T.Color('#d64b4b'),a=new T.Color('#f0a73a'),g=new T.Color('#3fbf7f');return f<.5?r.lerp(a,f*2):a.lerp(g,(f-.5)*2);};
 const pv=new (typeof THREE!=='undefined'?THREE.Vector3:Object)();
 function proj(x,y,z){pv.set(x,y,z).project(G.cam);const w=$('stage').clientWidth,h=$('stage').clientHeight;return[(pv.x*.5+.5)*w,(1-(pv.y*.5+.5))*h,pv.z];}
 function draw(){const sm=S.sim;if(!sm||!G.ok)return;const T=THREE,k=Math.min(sm.samples.length-1,Math.round(S.T/M.DT)),s=sm.samples[k],pos=s.z;
- const {robot,rig,cam,light,r,scene}=G;robot.position.set(0,0,pos);G.trolley.scale.y=1;const a=pos/.1315,ratio=26/15;rig.wheels.rearR.concat(rig.wheels.rearL).forEach(m=>m.rotation.x=a);rig.wheels.frontR.concat(rig.wheels.frontL).forEach(m=>m.rotation.x=a*ratio);
+ const {robot,rig,cam,light,r,scene}=G,rx=s.x||0,yaw=s.yaw||0,fwd=[Math.sin(yaw),Math.cos(yaw)];robot.position.set(rx,0,pos);robot.rotation.y=yaw;G.trolley.scale.y=1;
+ const lid=!!s.lidar;G.mastGrp.visible=!lid;G.propGrp.visible=lid;G.rays.visible=lid;G.hits.visible=lid;
+ if(lid){const ox=rx+fwd[0]*LID.fwd,oz=pos+fwd[1]*LID.fwd,P=G.rays.geometry.attributes.position.array,H=G.hits.geometry.attributes.position.array;for(let i=0;i<G.NR;i++){const b=(-158+i*4)*Math.PI/180,a=yaw+b,h=hitDist(ox,oz,a,s.ppl,S.cs.statics,true),ex=ox+Math.sin(a)*h.t,ez=oz+Math.cos(a)*h.t;P[i*6]=ox;P[i*6+1]=LID.h;P[i*6+2]=oz;P[i*6+3]=ex;P[i*6+4]=LID.h;P[i*6+5]=ez;H[i*3]=ex;H[i*3+1]=LID.h+.005;H[i*3+2]=ez;if(h.t>=LID.range){H[i*3+1]=-5;}}G.rays.geometry.attributes.position.needsUpdate=true;G.hits.geometry.attributes.position.needsUpdate=true;}const a=pos/.1315,ratio=26/15;rig.wheels.rearR.concat(rig.wheels.rearL).forEach(m=>m.rotation.x=a);rig.wheels.frontR.concat(rig.wheels.frontL).forEach(m=>m.rotation.x=a*ratio);
  const low=s.vt<19.2||s.dead,blink=.5+.5*Math.sin(performance.now()/130),sc=socCol(s.soc),cur=Math.max(0,Math.min(1.2,s.it/25));
  rig.battery.forEach(m=>{m.material.color.copy(sc).multiplyScalar(.5);m.material.emissive.copy(low?new T.Color('#d64b4b'):sc).multiplyScalar(low?.25+.6*blink:.12+.5*Math.min(1,cur));});rig.drivers.forEach(m=>m.material.emissive.setRGB(s.supState==='limiting'?.7:0,s.supState==='limiting'?.4:0,0));rig.fuse.forEach(m=>m.material.emissive.setRGB(cur>.85||low?.8:0,0,0));
  const worst=s.worst,rc=new T.Color(RC[worst]);const pulse=.5+.5*Math.sin(performance.now()/180);G.zones.forEach((z,i)=>{const hot=worst>=(i?4:3);z.disc.material.opacity=z.disc.userData.base*(hot?1.5+.5*pulse:1);z.ring.material.opacity=hot?.75+.25*pulse:.95;});
  s.ppl.forEach((p,i)=>{const h=G.people[i];if(!h)return;h.grp.position.set(p.x,0,p.z);const nx=sm.samples[Math.min(sm.samples.length-1,k+1)].ppl[i],pr=sm.samples[Math.max(0,k-1)].ppl[i],dx=nx.x-pr.x,dz=nx.z-pr.z,sp=Math.hypot(dx,dz)/(2*M.DT);
-  if(sp>.1)h.head=Math.atan2(dx,dz);else if(h.last==null||Math.hypot(p.x,p.z-pos)<5)h.head=Math.atan2(-p.x,pos-p.z);h.grp.rotation.y=h.head;h.last=1;
+  if(sp>.1)h.head=Math.atan2(dx,dz);else if(h.last==null||Math.hypot(p.x-rx,p.z-pos)<5)h.head=Math.atan2(rx-p.x,pos-p.z);h.grp.rotation.y=h.head;h.last=1;
   h.phase=p.z*3.4+p.x*3.4;const sw=Math.min(1,sp/.6)*.55;h.legs[0].rotation.x=Math.sin(h.phase)*sw;h.legs[1].rotation.x=-Math.sin(h.phase)*sw;h.arms[0].rotation.x=-Math.sin(h.phase)*sw*.8;h.arms[1].rotation.x=Math.sin(h.phase)*sw*.8;});
- light.position.set(-9,12,pos+12);light.target.position.set(0,0,pos);light.target.updateMatrixWorld();
+ light.position.set(rx-9,12,pos+12);light.target.position.set(rx,0,pos);light.target.updateMatrixWorld();
  const view=$('selView').value;G.walls.forEach(w=>{const full=view==='camera'||view==='follow';w.scale.y=full?1:.16;w.position.y=full?1.35:.216;});G.scene.fog=view==='overhead'?null:G.fog;
- if(view==='camera'){cam.up.set(0,1,0);cam.position.set(0,1.28,pos+.3);cam.lookAt(0,1.1,pos+9);cam.fov=62;}
- else if(view==='overhead'){cam.up.set(-1,0,0);cam.position.set(0,9,pos+3.5);cam.lookAt(0,0,pos+3.5);cam.fov=55;}
- else{cam.up.set(0,1,0);const d=G.zoom;cam.position.set(Math.max(-1.55,Math.min(1.55,Math.sin(G.angle)*d)),1.5+d*.07,pos+1.5-Math.cos(G.angle)*d);cam.lookAt(0,.8,pos+2.5);cam.fov=55;}
+ if(view==='camera'){cam.up.set(0,1,0);if(lid){const cx=rx+fwd[0]*LID.camFwd,cz=pos+fwd[1]*LID.camFwd,tl=Math.tan(LID.camTilt*Math.PI/180);cam.position.set(cx,LID.camH,cz);cam.lookAt(cx+fwd[0]*4,LID.camH-4*tl,cz+fwd[1]*4);}else{cam.position.set(rx+fwd[0]*.3,1.28,pos+fwd[1]*.3);cam.lookAt(rx+fwd[0]*9,1.1,pos+fwd[1]*9);}cam.fov=62;}
+ else if(view==='overhead'){cam.up.set(-1,0,0);cam.position.set(rx,9,pos+3.5);cam.lookAt(rx,0,pos+3.5);cam.fov=55;}
+ else{cam.up.set(0,1,0);const d=G.zoom;cam.position.set(Math.max(-1.55,Math.min(1.55,rx+Math.sin(G.angle)*d)),1.5+d*.07,pos+1.5-Math.cos(G.angle)*d);cam.lookAt(rx,.8,pos+2.5);cam.fov=55;}
  cam.updateProjectionMatrix();G.fog.far=S.cs.dark?26:65;r.render(scene,cam);overlay(s,k,view);}
 function ovBox(c,x,z,w,h,col,dash,label,fillA){const pts=[];for(const dx of [-w/2,w/2])for(const dz of [-.2,.2])for(const y of [0,h]){const p=proj(x+dx,y,z+dz);if(p[2]>1)return;pts.push(p);}
  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;pts.forEach(p=>{x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1]);});c.strokeStyle=col;c.lineWidth=2.2;c.setLineDash(dash?[6,4]:[]);c.strokeRect(x0,y0,x1-x0,y1-y0);c.setLineDash([]);if(fillA){c.fillStyle=col;c.globalAlpha=fillA;c.fillRect(x0,y0,x1-x0,y1-y0);c.globalAlpha=1;}
- if(label){c.font='600 12px system-ui,sans-serif';const tw=c.measureText(label).width+10;c.fillStyle=col;c.fillRect(x0,y0-18,tw,17);c.fillStyle='#fff';c.fillText(label,x0+5,y0-5);}}
-function overlay(s,k,view){const o=$('ov'),c=o.getContext('2d'),w=$('stage').clientWidth,h=$('stage').clientHeight;c.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);c.clearRect(0,0,w,h);const mii=s.mii,camZ=s.z+.27;
+ if(label){c.font='600 12px system-ui,sans-serif';const tw=c.measureText(label).width+10,ly=Math.max(y0,20),lx=Math.max(x0,4);c.fillStyle=col;c.fillRect(lx,ly-18,tw,17);c.fillStyle='#fff';c.fillText(label,lx+5,ly-5);}}
+function overlay(s,k,view){const o=$('ov'),c=o.getContext('2d'),w=$('stage').clientWidth,h=$('stage').clientHeight;c.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);c.clearRect(0,0,w,h);const mii=s.mii,yaw=s.yaw||0,cy=Math.cos(yaw),sy=Math.sin(yaw),camX=(s.x||0)+sy*.27,camZ=s.z+cy*.27,toW=(X,Zc)=>[camX+X*cy+Zc*sy,camZ-X*sy+Zc*cy],relZ=(px,pz)=>(px-camX)*sy+(pz-camZ)*cy,relX=(px,pz)=>(px-camX)*cy-(pz-camZ)*sy;
  const lbl=t=>t.kind==='yolo'?'ID:'+t.pid+' '+RN[t.rank]+' '+(t.X<-.35?'LEFT':t.X>.35?'RIGHT':'CENTER')+' '+t.d.toFixed(2)+'m':t.label;
  const trOf=id=>mii.tracks.find(t=>t.kind==='yolo'&&t.pid===id)||mii.tracks.find(t=>t.key==='F'+id);
- S.cs.people.forEach((p,i)=>{const q=s.ppl[i],tr=trOf(p.id),rej=mii.rejected.find(r=>r.pid===p.id);const live=q.z>camZ-.2&&Math.hypot(q.x,q.z-camZ)<9;if(!live)return;
-  if(tr&&!tr.ghost){const col=RC[tr.rank];if(view==='camera'){ovBox(c,q.x,q.z,.55,1.75,col,tr.kind==='fallback',lbl(tr),.12);}else{const pp=proj(q.x,2.0,q.z);if(pp[2]<1){c.font='600 12px system-ui,sans-serif';const tw=c.measureText(lbl(tr)).width+10;c.fillStyle=col;c.fillRect(pp[0]-tw/2,pp[1]-16,tw,17);c.fillStyle='#fff';c.fillText(lbl(tr),pp[0]-tw/2+5,pp[1]-3);}}}
+ S.cs.people.forEach((p,i)=>{const q=s.ppl[i],tr=trOf(p.id),rej=mii.rejected.find(r=>r.pid===p.id);const live=relZ(q.x,q.z)>-.2&&Math.hypot(q.x-camX,q.z-camZ)<9;if(!live)return;
+  if(tr&&!tr.ghost){const col=RC[tr.rank],ld=tr.src==='lidar';if(view==='camera'){if(Math.abs(Math.atan2(relX(q.x,q.z),relZ(q.x,q.z)))>42*Math.PI/180)return;ovBox(c,q.x,q.z,.55,1.75,ld?TEAL:col,tr.kind==='fallback'||ld,(ld?'LiDAR legs: ':'')+lbl(tr),.12);}else{const pp=proj(q.x,2.0,q.z);if(pp[2]<1){c.font='600 12px system-ui,sans-serif';const tw=c.measureText(lbl(tr)).width+10;c.fillStyle=col;c.fillRect(pp[0]-tw/2,pp[1]-16,tw,17);c.fillStyle='#fff';c.fillText(lbl(tr),pp[0]-tw/2+5,pp[1]-3);}}}
   else if(rej&&view==='camera'){ovBox(c,q.x,q.z,.55,1.75,'#8a8f98',true,'[G2] BG pid:'+p.id+' d:'+rej.d.toFixed(2)+' rejected',0);}
   else if(view==='camera'){ovBox(c,q.x,q.z,.55,1.75,'#6c7a89',true,'not detected',0);} });
- mii.tracks.filter(t=>t.ghost&&t.kind==='yolo').forEach(t=>{const wx=t.X,wz=camZ+t.Zc;const pp=proj(wx,1.0,wz);if(view==='camera')ovBox(c,wx,wz,.55,1.75,'#ff2d55',true,'GHOST '+t.label,.08);else if(pp[2]<1){c.fillStyle='#ff2d55';c.font='600 12px system-ui,sans-serif';const tx='ghost: nobody here';const tw=c.measureText(tx).width+10;c.fillRect(pp[0]-tw/2,pp[1]-16,tw,17);c.fillStyle='#fff';c.fillText(tx,pp[0]-tw/2+5,pp[1]-3);}});
+ mii.tracks.filter(t=>t.ghost&&t.kind==='yolo').forEach(t=>{const [wx,wz]=toW(t.X,t.Zc);const pp=proj(wx,1.0,wz);if(view==='camera')ovBox(c,wx,wz,.55,1.75,'#ff2d55',true,'GHOST '+t.label,.08);else if(pp[2]<1){c.fillStyle='#ff2d55';c.font='600 12px system-ui,sans-serif';const tx='ghost: nobody here';const tw=c.measureText(tx).width+10;c.fillRect(pp[0]-tw/2,pp[1]-16,tw,17);c.fillStyle='#fff';c.fillText(tx,pp[0]-tw/2+5,pp[1]-3);}});
  mii.tracks.filter(t=>t.kind==='fallback'&&!t.person).forEach(t=>{const st=S.cs.statics.find(q=>'F'+q.id===t.key);if(!st)return;const hh=st.kind==='ivpole'?1.8:st.kind==='glass'?1.5:.9;if(view==='camera')ovBox(c,st.x,st.z,st.kind==='ivpole'?.35:1.0,hh,'#ff2d55',true,'GHOST '+t.label,.1);});
- c.font='600 13px system-ui,sans-serif';if(view==='camera'){c.fillStyle='rgba(10,20,32,.78)';c.fillRect(10,48,230,50);c.fillStyle='#e4edf4';c.fillText('People: '+mii.nYolo+'   MII '+(S.cs.frameInterval?(1/S.cs.frameInterval).toFixed(1):'30')+' fps',18,68);c.fillText('Depth fallback: '+mii.tracks.filter(t=>t.kind==='fallback').length+' active',18,88);}
+ c.font='600 13px system-ui,sans-serif';if(view==='camera'){c.fillStyle='rgba(10,20,32,.78)';c.fillRect(10,48,230,50);c.fillStyle='#e4edf4';c.fillText('People: '+mii.nYolo+'   MII '+(S.cs.frameInterval?(1/S.cs.frameInterval).toFixed(1):'30')+' fps'+(s.lidar?'   LiDAR legs: '+mii.tracks.filter(t=>t.src==='lidar').length:''),18,68);c.fillText(s.lidar?'Camera at 1.0 m, tilted 12 degrees down':'Depth fallback: '+mii.tracks.filter(t=>t.kind==='fallback').length+' active',18,88);}
+ if(view!=='camera'&&s.lidar)mii.tracks.filter(t=>t.person&&t.src!=='camera'&&!t.ghost).forEach(t=>{const [wx,wz]=toW(t.X,t.Zc),pp=proj(wx,.05,wz);if(pp[2]<1){c.strokeStyle=TEAL;c.lineWidth=2;c.beginPath();c.arc(pp[0],pp[1],9,0,Math.PI*2);c.stroke();}});
  if(S.cs.dark){c.fillStyle='#ffd37a';c.font='600 13px system-ui,sans-serif';c.fillText('Ward lights off',12,h-16);}}
 /* ---------------- panels ---------------- */
 function rowPill(r){return'<span class="pill" style="background:'+RC[r]+'">'+RN[r]+'</span>';}
 function panels(s,k){const sm=S.sim,mii=s.mii,tr=id=>mii.tracks.find(t=>t.kind==='yolo'&&t.pid===id)||mii.tracks.find(t=>t.key==='F'+id);
  let rows='<tr><th>Who</th><th class="n">Dist</th><th>Camera and tracker</th><th>State</th></tr>';
- S.cs.people.forEach((p,i)=>{const q=s.ppl[i],d=Math.hypot(q.x,q.z-(s.z+.27)),t=tr(p.id),front=q.z>s.z+.27-.2;rows+='<tr><td>'+esc(p.kind)+' '+p.id+'</td><td>'+(front?d.toFixed(2)+' m':'behind')+'</td><td>'+esc((mii.pst&&mii.pst[p.id])||'out of camera view')+(t&&t.ghost?' (ghost)':'')+'</td><td>'+(t?rowPill(t.rank):'<span class="note">no track</span>')+'</td></tr>';});
+ S.cs.people.forEach((p,i)=>{const q=s.ppl[i],d=Math.hypot(q.x,q.z-(s.z+.27)),t=tr(p.id),front=q.z>s.z+.27-.2;rows+='<tr><td>'+esc(p.kind)+' '+p.id+'</td><td>'+(front?d.toFixed(2)+' m':'behind')+'</td><td>'+esc((mii.pst&&mii.pst[p.id])||'out of camera view')+(t&&t.ghost?' (ghost)':'')+(t&&t.src==='lidar'?' <span class="pp" style="color:'+TEAL+';border-color:'+TEAL+'">LiDAR</span>':'')+'</td><td>'+(t?rowPill(t.rank):'<span class="note">no track</span>')+'</td></tr>';});
  mii.tracks.filter(t=>!t.person).forEach(t=>{rows+='<tr><td>furniture ('+esc(t.pid)+')</td><td>'+t.d.toFixed(2)+' m</td><td>depth fallback, false detection</td><td>'+rowPill(t.rank)+'</td></tr>';});
  if(!S.cs.people.length&&!mii.tracks.length)rows+='<tr><td colspan="4" class="note">Nothing in view.</td></tr>';$('ppl').innerHTML=rows;
  const worst=s.worst,ch=$('chip');ch.textContent=s.dead?'OFFLINE':RN[worst];ch.style.background=s.dead?'#7a1f1f':RC[worst];
  $('hread').innerHTML='t '+s.t.toFixed(1)+' s<br>Speed '+s.v.toFixed(2)+' m/s'+(s.cap!=null?' (cap '+s.cap.toFixed(2)+')':'')+'<br>'+s.vt.toFixed(2)+' V · '+s.it.toFixed(1)+' A';
  $('off').classList.toggle('on',!!s.dead);
- const ev=sm.events.filter(e=>e.t<=S.T+1e-9),n=ev.length;if(n!==S.logN){S.logN=n;$('log').innerHTML=ev.length?ev.map(e=>'<div><span class="t">'+e.t.toFixed(1)+' s</span><span class="pill" style="background:'+(e.type==='power'?'#7a1f1f':RC[e.rank])+'">'+(e.type==='power'?'POWER':e.type==='visual'?'VISUAL':RN[e.rank])+'</span> '+esc(e.text)+(e.fake?' <span class="pp bad">false alert</span>':'')+'</div>').join(''):'<span class="note">No alerts yet.</span>';$('log').scrollTop=1e6;}
- const recent=[...ev].reverse().find(e=>S.T-e.t<=2.5&&e.type!=='power'),sy=$('say');if(recent){sy.innerHTML='<i>'+(recent.type==='visual'?'Visual only':'Speaker')+'</i>'+esc(recent.text);sy.classList.add('on');}else sy.classList.remove('on');
+ const ev=sm.events.filter(e=>e.t<=S.T+1e-9),n=ev.length;if(n!==S.logN){S.logN=n;$('log').innerHTML=ev.length?ev.map(e=>'<div><span class="t">'+e.t.toFixed(1)+' s</span><span class="pill" style="background:'+(e.type==='power'?'#7a1f1f':e.type==='nav'?'#2563eb':RC[e.rank])+'">'+(e.type==='power'?'POWER':e.type==='nav'?'PLANNER':e.type==='visual'?'VISUAL':RN[e.rank])+'</span> '+esc(e.text)+(e.fake?' <span class="pp bad">false alert</span>':'')+(e.src==='lidar'?' <span class="pp" style="color:'+TEAL+';border-color:'+TEAL+'">LiDAR</span>':'')+'</div>').join(''):'<span class="note">No alerts yet.</span>';$('log').scrollTop=1e6;}
+ const recent=[...ev].reverse().find(e=>S.T-e.t<=2.5&&e.type!=='power'&&e.type!=='nav'),sy=$('say');if(recent){sy.innerHTML='<i>'+(recent.type==='visual'?'Visual only':'Speaker')+'</i>'+esc(recent.text);sy.classList.add('on');}else sy.classList.remove('on');
  const lim=C.limits(6),vlo=17.5,vhi=24,pc=v=>(100*(v-vlo)/(vhi-vlo)).toFixed(1)+'%';
- $('rob').innerHTML='<div>Speed <b>'+s.v.toFixed(2)+' m/s</b> · navigation wants '+s.vnav.toFixed(2)+(s.cap!=null?' · alert cap '+s.cap.toFixed(2):'')+(s.vlid!=null&&s.vlid<s.vnav?' · LiDAR limit '+s.vlid.toFixed(2):'')+'</div><div class="note">Position '+s.z.toFixed(1)+' m along the corridor</div>'+
+ $('rob').innerHTML='<div>Speed <b>'+s.v.toFixed(2)+' m/s</b> · navigation wants '+s.vnav.toFixed(2)+(s.cap!=null?' · alert cap '+s.cap.toFixed(2):'')+(s.vlid!=null&&s.vlid<s.vnav?' · LiDAR limit '+s.vlid.toFixed(2):'')+'</div><div class="note">Position '+s.z.toFixed(1)+' m along the corridor'+(s.x?', '+Math.abs(s.x).toFixed(2)+' m '+(s.x<0?'right':'left')+' of the centre line':'')+(s.yielding?' · <b style="color:#2563eb">planner yielding to a person walking into the path</b>':'')+'</div>'+
   '<div style="margin-top:6px">Battery <b>'+s.vt.toFixed(2)+' V</b>, '+(100*s.soc).toFixed(0)+'% charge · power supervisor: <b>'+(S.cfg.powerSup===false?'off':s.supState)+'</b>'+(S.cfg.powerSup===false?'':' · power cap '+s.pcap.toFixed(0)+' W')+'</div>'+
   '<div class="bar"><i style="width:'+Math.max(0,Math.min(100,100*(s.vt-vlo)/(vhi-vlo)))+'%;background:'+(s.vt<lim.vmin?'var(--bad)':s.vt<lim.guard?'var(--warn)':'var(--acc)')+'"></i><b style="left:'+pc(lim.guard)+';background:#f0a73a"></b><b style="left:'+pc(lim.vmin)+';background:#ff2d55"></b></div><div class="note">Orange mark: 19.7 V guard. Red mark: 19.2 V limit.</div>';
- $('tnow').textContent=s.t.toFixed(0)+' / '+S.cs.duration+' s';$('seek').value=Math.round(1000*S.T/S.cs.duration);timeline(k);}
+ drawMap(k);$('tnow').textContent=s.t.toFixed(0)+' / '+S.cs.duration+' s';$('seek').value=Math.round(1000*S.T/S.cs.duration);timeline(k);}
 function timeline(k){const cv=$('tl'),c=cv.getContext('2d'),W=cv.width,Hh=cv.height,sm=S.sim,n=sm.samples.length;c.clearRect(0,0,W,Hh);
  for(let x=0;x<W;x++){const s=sm.samples[Math.min(n-1,Math.floor(x/W*n))];c.fillStyle=s.dead?'#4a1010':RC[s.worst];c.globalAlpha=s.worst===0&&!s.dead?.25:.9;c.fillRect(x,6,1,Hh-12);}c.globalAlpha=1;
  sm.events.forEach(e=>{const x=e.t/S.cs.duration*W;c.fillStyle=e.type==='power'?'#000':'#fff';c.fillRect(x-1,0,2,Hh);});const cx=(k/(n-1))*W;c.fillStyle='#0b1218';c.fillRect(cx-1.5,0,3,Hh);c.fillStyle='#fff';c.fillRect(cx-.5,0,1,Hh);}
+/* ---------------- LiDAR map (built incrementally from the replayed scans) ---------------- */
+const MAP={cell:.1,x0:-2.1,z0:-5.5,nx:42,nz:520,grid:null,k:-1,cs:null};
+function mapReset(){MAP.grid=new Uint8Array(MAP.nx*MAP.nz);MAP.k=-1;MAP.cs=S.cs;}
+function mapIntegrate(s){const yaw=s.yaw||0,ox=(s.x||0)+Math.sin(yaw)*LID.fwd,oz=s.z+Math.cos(yaw)*LID.fwd;for(let i=0;i<80;i++){const a=yaw+(-158+i*4)*Math.PI/180,h=hitDist(ox,oz,a,[],S.cs.statics,false),sx=Math.sin(a),cz=Math.cos(a);
+ for(let d=.15;d<h.t;d+=.1){const ix=Math.floor((ox+sx*d-MAP.x0)/MAP.cell),iz=Math.floor((oz+cz*d-MAP.z0)/MAP.cell);if(ix>=0&&ix<MAP.nx&&iz>=0&&iz<MAP.nz){const j=iz*MAP.nx+ix;if(MAP.grid[j]!==2)MAP.grid[j]=1;}}
+ if(h.t<LID.range){const ix=Math.floor((ox+sx*h.t-MAP.x0)/MAP.cell),iz=Math.floor((oz+cz*h.t-MAP.z0)/MAP.cell);if(ix>=0&&ix<MAP.nx&&iz>=0&&iz<MAP.nz)MAP.grid[iz*MAP.nx+ix]=2;}}}
+function drawMap(k){const cv=$('map'),c=cv.getContext('2d'),sm=S.sim,s=sm.samples[k],W=cv.width,H=cv.height;c.setTransform(1,0,0,1,0,0);c.fillStyle='#0b1218';c.fillRect(0,0,W,H);
+ if(!s.lidar){$('mapnote').textContent='Current layout: no map. The LiDAR only stops the robot for something inside its own lane.';c.fillStyle='#8fa3b0';c.font='24px system-ui,sans-serif';c.textAlign='center';c.fillText('No map in the current layout',W/2,H/2-10);c.font='18px system-ui,sans-serif';c.fillText('LiDAR used as a stop sensor only',W/2,H/2+22);c.textAlign='left';return;}
+ $('mapnote').textContent='Built from the simulated scans as the robot drives. White: walls and furniture. Dark teal: seen floor. Amber: planned path. Glass is not in the map.';
+ if(MAP.cs!==S.cs||k<MAP.k)mapReset();for(let i=MAP.k+1;i<=k;i++)mapIntegrate(sm.samples[i]);MAP.k=k;
+ const sc=W/4.6,zTop=s.z+(H/sc)*.68,px=x=>W/2+x*sc,py=z=>(zTop-z)*sc;
+ for(let iz=0;iz<MAP.nz;iz++){const z=MAP.z0+iz*MAP.cell;if(z<zTop-H/sc-.2||z>zTop+.2)continue;for(let ix=0;ix<MAP.nx;ix++){const g=MAP.grid[iz*MAP.nx+ix];if(!g)continue;c.fillStyle=g===2?'#e6edf3':'#1d3a44';c.fillRect(px(MAP.x0+ix*MAP.cell),py(z+MAP.cell),MAP.cell*sc+.6,MAP.cell*sc+.6);}}
+ (S.cs.statics||[]).filter(q=>q.kind==='glass').forEach(q=>{c.strokeStyle='#5b8def';c.setLineDash([6,5]);c.lineWidth=2;c.beginPath();c.moveTo(px(q.x-.55),py(q.z));c.lineTo(px(q.x+.55),py(q.z));c.stroke();c.setLineDash([]);c.fillStyle='#9dbbf7';c.font='15px system-ui,sans-serif';c.fillText('glass: not in map',px(q.x-.55),py(q.z)-8);});
+ if(S.cs.route){c.strokeStyle='#ffb020';c.lineWidth=3;c.setLineDash([10,7]);c.beginPath();for(let z=0;z<=S.cs.plan.goalZ;z+=.25){const x=M.routeX(S.cs,z);if(z===0)c.moveTo(px(x),py(z));else c.lineTo(px(x),py(z));}c.stroke();c.setLineDash([]);}
+ else if(S.cs.plan.goalZ>0){c.strokeStyle='#ffb020';c.lineWidth=3;c.setLineDash([10,7]);c.beginPath();c.moveTo(px(0),py(0));c.lineTo(px(0),py(S.cs.plan.goalZ));c.stroke();c.setLineDash([]);}
+ const yaw=s.yaw||0,rx=s.x||0;c.fillStyle='rgba(31,181,168,.12)';c.beginPath();c.moveTo(px(rx),py(s.z));for(let b=-158;b<=158;b+=4){const a=yaw+b*Math.PI/180;c.lineTo(px(rx+Math.sin(a)*3),py(s.z+Math.cos(a)*3));}c.closePath();c.fill();
+ s.mii.tracks.filter(t=>t.person&&!t.ghost).forEach(t=>{const cy=Math.cos(yaw),sy=Math.sin(yaw),camX=rx+sy*.27,camZ=s.z+cy*.27,wx=camX+t.X*cy+t.Zc*sy,wz=camZ-t.X*sy+t.Zc*cy;c.fillStyle=RC[t.rank];c.beginPath();c.arc(px(wx),py(wz),8,0,Math.PI*2);c.fill();c.fillStyle='#fff';c.font='bold 13px system-ui,sans-serif';c.fillText(String(t.pid),px(wx)-4,py(wz)+5);});
+ c.save();c.translate(px(rx),py(s.z));c.rotate(-yaw);c.fillStyle=TEAL;c.beginPath();c.moveTo(0,-16);c.lineTo(10,10);c.lineTo(-10,10);c.closePath();c.fill();c.fillStyle='#0b1218';c.fillRect(-7,12,14,16);c.restore();
+ c.fillStyle='#e6edf3';c.font='16px system-ui,sans-serif';c.fillText('1 m',22+sc,H-14);c.fillRect(16,H-26,sc,3);}
 /* ---------------- control ---------------- */
 function run(){S.sim=sim(S.cs,S.cfg);S.logN=-1;}
 function seekTo(t){S.T=Math.max(0,Math.min(S.cs.duration,t));frame();}
@@ -569,28 +673,49 @@ $('play').onclick=()=>{if(S.playing){S.playing=false;$('play').textContent='Play
 $('seek').oninput=()=>{seekTo($('seek').value/1000*S.cs.duration);};
 const tl=$('tl');let tld=false;const tlSeek=e=>{const r=tl.getBoundingClientRect();seekTo((e.clientX-r.left)/r.width*S.cs.duration);};tl.addEventListener('pointerdown',e=>{tld=true;tl.setPointerCapture(e.pointerId);tlSeek(e);});tl.addEventListener('pointermove',e=>{if(tld)tlSeek(e);});tl.addEventListener('pointerup',()=>tld=false);
 $('selR').onchange=()=>{S.cfg.response=$('selR').value;reload(true);};$('selView').onchange=()=>{$('hint').textContent=$('selView').value==='follow'?'Drag to rotate, scroll to zoom':$('selView').value==='camera'?'What the robot camera sees, with the layer\'s detections':'Whole stretch from above';frame();};
-function segs(){const cs=S.cs,v=$('segV');v.innerHTML=Object.values(M.VERSIONS).map(x=>'<button data-v="'+x.id+'" class="'+(S.cfg.version===x.id?'on':'')+'">'+x.name+'</button>').join('');v.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.version=b.dataset.v;reload(true);});
+function segs(){const cs=S.cs,v=$('segV'),ss=$('segS');ss.innerHTML=[['cam','Current'],['fused','Proposed: LiDAR + camera']].map(x=>'<button data-s="'+x[0]+'" class="'+(S.cfg.sensors===x[0]?'on':'')+'">'+x[1]+'</button>').join('');ss.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.sensors=b.dataset.s;reload(true);});v.innerHTML=Object.values(M.VERSIONS).map(x=>'<button data-v="'+x.id+'" class="'+(S.cfg.version===x.id?'on':'')+'">'+x.name+'</button>').join('');v.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.version=b.dataset.v;reload(true);});
  $('lPow').classList.toggle('hide',cs.id!=='I');const p=$('segP');p.innerHTML=[['off','Off',false],['on','On',true]].map(x=>'<button data-p="'+x[0]+'" class="'+((S.cfg.powerSup!==false)===x[2]?'on':'')+'">'+x[1]+'</button>').join('');p.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.powerSup=b.dataset.p==='on';reload(true);});}
-function variants(){const cs=S.cs;return cs.id==='I'?[{label:'Power supervisor off',cfg:{powerSup:false}},{label:'Power supervisor on',cfg:{powerSup:true}}]:Object.values(M.VERSIONS).map(v=>({label:v.name,cfg:{version:v.id}}));}
+function variants(){const cs=S.cs;if(cs.tag==='lidar')return[{label:'Current layout',cfg:{sensors:'cam'}},{label:'Proposed: LiDAR + camera',cfg:{sensors:'fused'}}];return cs.id==='I'?[{label:'Power supervisor off',cfg:{powerSup:false}},{label:'Power supervisor on',cfg:{powerSup:true}}]:Object.values(M.VERSIONS).map(v=>({label:v.name,cfg:{version:v.id}}));}
 function outcome(){const cs=S.cs,vs=variants(),cur=v=>Object.keys(v.cfg).every(k=>S.cfg[k]===v.cfg[k]);
  const rs=vs.map(v=>{const r=sim(cs,{...S.cfg,...v.cfg}),m=r.metrics,p=cs.pass(m,r.events);return{v,m,p,r};});
  const f=(x,n=1,u='')=>x==null||!isFinite(x)?'none':x.toFixed(n)+u;let h='<tr><th></th>'+rs.map(x=>'<th class="vcol'+(cur(x.v)?' sel':'')+'" data-k="'+esc(JSON.stringify(x.v.cfg))+'">'+esc(x.v.label)+'</th>').join('')+'</tr>';
  const row=(l,fn)=>'<tr><td>'+l+'</td>'+rs.map(x=>'<td class="'+(cur(x.v)?'sel':'')+'">'+fn(x)+'</td>').join('')+'</tr>';
- h+=row('First real alert',x=>f(x.m.firstAlert,1,' s'))+row('Alerts (false)',x=>x.m.alerts+' ('+x.m.falseAlerts+')')+row('Seconds a person was inside 1.5 m with no alert',x=>f(x.m.unalertedS,1,' s'))+row('Closest approach',x=>isFinite(x.m.minDist)?f(x.m.minDist,2,' m'):'n/a')+row('Robot held by a person who was not there',x=>f(x.m.ghostStopS,0,' s'))+row('Lowest battery voltage',x=>f(x.m.minV,1,' V'))+row('Result',x=>x.m.dead?'Supply loss at '+x.m.deadT.toFixed(0)+' s':x.m.arrivalT!=null?'Arrived at '+x.m.arrivalT.toFixed(0)+' s':'Did not travel')+
+ h+=row('First real alert',x=>f(x.m.firstAlert,1,' s')+(x.m.firstAlertD?' at '+x.m.firstAlertD.toFixed(1)+' m':''))+row('Robot speed when a person entered its lane',x=>f(x.m.entrySpeed,2,' m/s'))+row('Alerts (false)',x=>x.m.alerts+' ('+x.m.falseAlerts+')')+row('Seconds a person was inside 1.5 m with no alert',x=>f(x.m.unalertedS,1,' s'))+row('Closest approach',x=>isFinite(x.m.minDist)?f(x.m.minDist,2,' m'):'n/a')+row('Robot held by a person who was not there',x=>f(x.m.ghostStopS,0,' s'))+row('Lowest battery voltage',x=>f(x.m.minV,1,' V'))+row('Result',x=>x.m.dead?'Supply loss at '+x.m.deadT.toFixed(0)+' s':x.m.arrivalT!=null?'Arrived at '+x.m.arrivalT.toFixed(0)+' s':'Did not travel')+
   row('Acceptance test',x=>'<span class="pp '+(x.p.ok?'ok':'bad')+'">'+(x.p.ok?'PASS':'FAIL')+'</span> <span class="note">'+esc(x.p.why)+'</span>');
  $('outc').innerHTML=h;$('outc').querySelectorAll('th.vcol').forEach(th=>th.onclick=()=>{Object.assign(S.cfg,JSON.parse(th.dataset.k));reload(true);});}
-function suite(){const vs=Object.values(M.VERSIONS);let h='<tr><th>Case</th><th>Acceptance criterion</th>'+vs.map(v=>'<th>'+v.name+'</th>').join('')+'</tr>';
- const crit={A:'No alerts for people who only stand nearby',B:'Visitor flagged before reaching 1.5 m, robot keeps clear',C:'MOVE AWAY repeats, changes wording, then mutes with a visual cue',D:'No false alerts on furniture after the 0.5 s warm-up',E:'A person standing at boot is flagged within 2 s',F:'Alert and hold end when the person leaves',G:'In the dark, the depth fallback still fires before contact',H:'Person still flagged at 0.5 fps',I:'Robot reaches the goal without losing power'};
- M.CASES.forEach(cs=>{h+='<tr><td><b>'+cs.n+'</b> '+esc(cs.title)+'</td><td class="note">'+crit[cs.id]+'</td>'+vs.map(v=>{if(cs.id==='I'){if(v.id!=='v60')return'<td class="note">same in every version</td>';const a=sim(cs,{version:v.id,response:S.cfg.response,powerSup:false}),b=sim(cs,{version:v.id,response:S.cfg.response,powerSup:true}),pa=cs.pass(a.metrics,a.events),pb=cs.pass(b.metrics,b.events);return'<td>supervisor off <span class="pp '+(pa.ok?'ok':'bad')+'">'+(pa.ok?'PASS':'FAIL')+'</span><br>supervisor on <span class="pp '+(pb.ok?'ok':'bad')+'">'+(pb.ok?'PASS':'FAIL')+'</span></td>';}
-  const r=sim(cs,{version:v.id,response:S.cfg.response,powerSup:true}),p=cs.pass(r.metrics,r.events);return'<td><span class="pp '+(p.ok?'ok':'bad')+'">'+(p.ok?'PASS':'FAIL')+'</span></td>';}).join('')+'</tr>';});
+function suite(){const vs=Object.values(M.VERSIONS),lay=[['cam','Current layout'],['fused','Proposed: LiDAR + camera']];let h='<tr><th rowspan="2">Case</th><th rowspan="2">Acceptance criterion</th>'+lay.map(l=>'<th colspan="3" style="text-align:center">'+l[1]+'</th>').join('')+'</tr><tr>'+lay.map(()=>vs.map(v=>'<th>'+v.name.split(' ')[0]+'</th>').join('')).join('')+'</tr>';
+ const crit={A:'No alerts for people who only stand nearby',B:'Visitor flagged before reaching 1.5 m, robot keeps clear',C:'MOVE AWAY repeats, changes wording, then mutes with a visual cue',D:'No false alerts on furniture after the 0.5 s warm-up',E:'A person standing at boot is flagged within 2 s',F:'Alert and hold end when the person leaves',G:'In the dark, a warning still comes before contact',H:'Person still flagged at 0.5 fps',I:'Robot reaches the goal without losing power',J:'Robot already at 0.3 m/s or less when a person steps in from the side',K:'Robot gets round a parked bed and arrives'};
+ const cell=ok=>'<td><span class="pp '+(ok?'ok':'bad')+'">'+(ok?'PASS':'FAIL')+'</span></td>';
+ M.CASES.forEach(cs=>{h+='<tr><td><b>'+cs.n+'</b> '+esc(cs.title)+'</td><td class="note">'+crit[cs.id]+'</td>'+lay.map(l=>vs.map(v=>{if(cs.id==='I'){if(v.id!=='v60')return'<td class="note">same in every version</td>';const a=sim(cs,{version:v.id,response:S.cfg.response,powerSup:false,sensors:l[0]}),b=sim(cs,{version:v.id,response:S.cfg.response,powerSup:true,sensors:l[0]}),pa=cs.pass(a.metrics,a.events).ok,pb=cs.pass(b.metrics,b.events).ok;return'<td>supervisor off <span class="pp '+(pa?'ok':'bad')+'">'+(pa?'PASS':'FAIL')+'</span><br>supervisor on <span class="pp '+(pb?'ok':'bad')+'">'+(pb?'PASS':'FAIL')+'</span></td>';}
+  const r=sim(cs,{version:v.id,response:S.cfg.response,powerSup:true,sensors:l[0]});return cell(cs.pass(r.metrics,r.events).ok);}).join('')).join('')+'</tr>';});
  $('suite').innerHTML=h;}
+function addons(){const g=(id,cfg)=>{const cs=M.CASES.find(c=>c.id===id);const r=sim(cs,{version:'v60',response:'supervised',powerSup:true,...cfg});return{m:r.metrics,p:cs.pass(r.metrics,r.events)};};
+ const G7c=g('G',{sensors:'cam'}),G7f=g('G',{sensors:'fused'}),E5=g('E',{sensors:'fused',version:'v52'}),J=g('J',{sensors:'fused'}),Jc=g('J',{sensors:'cam'}),K=g('K',{sensors:'fused'});
+ const items=[['Case 10, side approach','With 316 degrees of coverage the planner sees a visitor walking into the path from a doorway and slows the robot to '+J.m.entrySpeed.toFixed(2)+' m/s before they step in. The camera alone was still doing '+Jc.m.entrySpeed.toFixed(2)+' m/s.'],
+  ['Case 11, parked bed','The scans build a map, so a blocked lane gets a detour and the robot arrives at '+K.m.arrivalT.toFixed(0)+' s instead of waiting in front of the bed for ever.'],
+  ['Case 7, dark ward','Leg tracks do not need light: first warning at '+G7f.m.firstAlertD.toFixed(1)+' m instead of '+G7c.m.firstAlertD.toFixed(1)+' m from the depth fallback.'],
+  ['Case 8, slow computer','The LiDAR runs at its own rate, so people are tracked between camera frames and v5.2 passes.'],
+  ['Case 5, nurse at boot','Legs that are not in the map cannot be background, so the v5.2 bug is overruled ('+E5.p.why+').'],
+  ['Case 6, person leaves','No legs where the ghost track claims a person: the track is dropped at once, even on v4.0.'],
+  ['Case 4, furniture','The desk and the IV pole are in the map, so their depth ghosts are vetoed. The glass partition is not, so v4.0 still fails that case.']];
+ $('addons').innerHTML=items.map(x=>'<li><b>'+x[0]+':</b> '+esc(x[1])+'</li>').join('');}
+function coverage(){const cv=$('cov'),c=cv.getContext('2d'),W=cv.width,H=cv.height;c.clearRect(0,0,W,H);const dark=matchMedia('(prefers-color-scheme:dark)').matches,ink=dark?'#e6edf3':'#16202b',mute=dark?'#93a1b0':'#586878';
+ const panel=(cx,cy,title,prop)=>{const sc=36;c.fillStyle=ink;c.font='bold 17px system-ui,sans-serif';c.textAlign='center';c.fillText(title,cx,34);
+  if(prop){c.fillStyle='rgba(31,181,168,.22)';c.beginPath();c.moveTo(cx,cy);for(let b=-158;b<=158;b+=3){const a=b*Math.PI/180;c.lineTo(cx+Math.sin(a)*4*sc,cy-Math.cos(a)*4*sc);}c.closePath();c.fill();c.strokeStyle='#1fb5a8';c.lineWidth=2;c.stroke();
+   c.fillStyle='rgba(255,45,85,.3)';c.beginPath();c.moveTo(cx,cy);for(let b=158;b<=202;b+=3){const a=b*Math.PI/180;c.lineTo(cx+Math.sin(a)*4*sc,cy-Math.cos(a)*4*sc);}c.closePath();c.fill();}
+  c.fillStyle='rgba(91,141,239,.25)';c.beginPath();c.moveTo(cx,cy-.27*sc);for(let b=-40;b<=40;b+=4){const a=b*Math.PI/180;c.lineTo(cx+Math.sin(a)*4*sc,cy-.27*sc-Math.cos(a)*4*sc);}c.closePath();c.fill();c.strokeStyle='#5b8def';c.lineWidth=2;c.stroke();
+  if(!prop){c.fillStyle='rgba(120,130,140,.3)';c.fillRect(cx-.55*sc,cy-4*sc,1.1*sc,3.7*sc);c.fillStyle=mute;c.font='12px system-ui,sans-serif';c.fillText('stop lane',cx,cy-4.2*sc-4);}
+  c.fillStyle=ink;c.fillRect(cx-.33*sc,cy-.34*sc,.66*sc,.67*sc);c.fillStyle=mute;c.fillRect(cx-.31*sc,cy+.6*sc,.62*sc,.67*sc);c.font='12px system-ui,sans-serif';c.fillText('trolley',cx,cy+1.55*sc);
+  for(const r of [1,1.5]){c.strokeStyle=r===1?'#ff2d55':'#ffb020';c.lineWidth=1.5;c.beginPath();c.arc(cx,cy-.27*sc,r*sc,0,Math.PI*2);c.stroke();}
+  c.fillStyle=mute;c.font='13px system-ui,sans-serif';const cap=prop?['LiDAR 316 degrees (teal), camera 80 degrees (blue)','rear 44 degrees blind behind the trolley (red)']:['camera 80 degrees (blue) and a stop lane','nothing to the sides or behind'];c.fillText(cap[0],cx,H-30);c.fillText(cap[1],cx,H-12);c.textAlign='left';};
+ panel(W/4,H/2+20,'Current layout',false);panel(3*W/4,H/2+20,'Proposed layout',true);}
 function reload(keepT){segs();$('selR').value=S.cfg.response;run();if(!keepT){S.T=0;S.playing=false;$('play').textContent='Play';}$('cTitle').textContent=S.cs.n+'. '+S.cs.title;const tg=$('cTag');tg.textContent=TAGN[S.cs.tag];tg.className='tag '+S.cs.tag;$('story').textContent=S.cs.story;$('chap').textContent='Chapter 5 link: '+S.cs.chapter;
- if(G.ok&&!keepT)loadScene();outcome();suite();$('seek').max=1000;frame();document.querySelectorAll('.cc').forEach(b=>b.classList.toggle('on',b.dataset.id===S.cs.id));}
-function pick(id){S.cs=M.CASES.find(c=>c.id===id);S.cfg={version:'v60',response:S.cfg.response,powerSup:true};reload(false);}
+ if(G.ok&&!keepT)loadScene();outcome();suite();addons();$('seek').max=1000;frame();document.querySelectorAll('.cc').forEach(b=>b.classList.toggle('on',b.dataset.id===S.cs.id));}
+function pick(id){S.cs=M.CASES.find(c=>c.id===id);S.cfg={version:'v60',response:S.cfg.response,powerSup:true,sensors:S.cfg.sensors};reload(false);}
 $('cards').innerHTML=M.CASES.map(c=>'<button class="cc" data-id="'+c.id+'"><span class="nn">Case '+c.n+'</span><b>'+esc(c.title)+'</b><span class="tag '+c.tag+'">'+TAGN[c.tag]+'</span></button>').join('');
 document.querySelectorAll('.cc').forEach(b=>b.onclick=()=>{pick(b.dataset.id);window.scrollTo({top:$('stage').getBoundingClientRect().top+scrollY-90,behavior:'smooth'});});
 const ok3=ensure3D();if(!ok3){$('msg3d').style.display='flex';$('msg3d').textContent='3D is not available in this browser. The timeline, alert log, tables and every result below still work.';}
-reload(false);requestAnimationFrame(tick);
+coverage();matchMedia('(prefers-color-scheme:dark)').addEventListener('change',coverage);reload(false);requestAnimationFrame(tick);
 })();
 </script>
 </body>

@@ -2,6 +2,15 @@
    and the battery power supervisor. All people, detections and misses are scripted, nothing here is recorded footage. */
 const MII=(()=>{
 const C=ShadowCore,DT=.1,CAM=.27,HFOV=40*Math.PI/180,VMAXP=2.0,H_PRED=1.5;
+/* Sensor layouts. Measured on the Genesis CAD: chassis 666 x 672 mm, deck rim 175 mm, rear tyres 262 mm, motors 222 mm, free bay at the front centre. */
+const LID={fwd:.30,h:.29,blind:22*Math.PI/180,range:12,camH:1.0,camFwd:.17,camTilt:12};
+const SENSORS={
+ cam:{id:'cam',name:'Current: camera on 1.28 m mast, LiDAR as a stop sensor only',lidar:false},
+ fused:{id:'fused',name:'Proposed: LiDAR at 0.29 m front, camera at 1.0 m, SLAM map',lidar:true}};
+const rel=(px,pz,ox,oz,yaw)=>{const dx=px-ox,dz=pz-oz,c=Math.cos(yaw),s=Math.sin(yaw);return{X:dx*c-dz*s,Zc:dx*s+dz*c};};
+function routeX(cs,z){const r=cs.route;if(!r)return 0;if(z<=r[0][0])return r[0][1];for(let n=1;n<r.length;n++){if(z<=r[n][0]){const a=r[n-1],b=r[n],f=(z-a[0])/Math.max(1e-6,b[0]-a[0]),u=f*f*(3-2*f);return a[1]+(b[1]-a[1])*u;}}return r[r.length-1][1];}
+function routeYaw(cs,z){const h=.05;return Math.atan2(routeX(cs,z+h)-routeX(cs,z-h),2*h);}
+function footprint(s){if(!s.w)return[[s.x,s.z]];const pts=[];for(let dx=-s.w/2;dx<=s.w/2+1e-6;dx+=.2)for(let dz=-s.l/2;dz<=s.l/2+1e-6;dz+=.2)pts.push([s.x+dx,s.z+dz]);return pts;}
 const VERSIONS={
  v40:{id:'v40',name:'v4.0 (first MII)',bgModel:false,bgTrusted:false,gates:false,adaptive:false,immunity:false,reconfirm:true,warmup:0,buffer:1.0},
  v52:{id:'v52',name:'v5.2 (background model)',bgModel:true,bgTrusted:false,gates:true,adaptive:false,immunity:false,reconfirm:false,warmup:.5,buffer:.27},
@@ -16,67 +25,76 @@ const side=x=>x>.15?'LEFT':x<-.15?'RIGHT':'CENTER';
 function slope(pts){const n=pts.length;if(n<2)return 0;let mt=0,md=0;pts.forEach(q=>{mt+=q[0];md+=q[1];});mt/=n;md/=n;let a=0,b=0;pts.forEach(q=>{a+=(q[0]-mt)*(q[1]-md);b+=(q[0]-mt)**2;});return b>0?a/b:0;}
 
 function simulate(cs,cfg){
- const V=VERSIONS[cfg.version||'v60'],resp=cfg.response||'supervised',powerSup=cfg.powerSup!==false;
+ const V=VERSIONS[cfg.version||'v60'],resp=cfg.response||'supervised',powerSup=cfg.powerSup!==false,SEN=SENSORS[cfg.sensors||'fused'],lidOn=SEN.lidar;
  const prof={...C.DEFAULT,...(cs.profile||{})},lim=C.limits(prof.cells),mass=prof.mass+(cs.payload||0);
  const S={tracks:new Map()},events=[],samples=[],plan=cs.plan||{startT:0,goalZ:0};
- let z=cs.z0||0,v=0,soc=cs.soc??.8,t=0,dead=false,deadT=null,lossS=0,vt=C.ocv(soc,prof.cells),it=0,minV=Infinity;
+ let yielding=false,yieldUntil=-1,yieldV=Infinity,z=cs.z0||0,v=0,soc=cs.soc??.8,t=0,dead=false,deadT=null,lossS=0,vt=C.ocv(soc,prof.cells),it=0,minV=Infinity;
  const R=prof.resistance,sup=new C.PowerSupervisor(prof,{rOnline:false});
- const alert=(t0,tr,rank,text,type='alert')=>events.push({t:+t0.toFixed(2),key:tr.key,pid:tr.pid,rank,text,type,fake:!tr.person||tr.ghost});
- const fi=cs.frameInterval||0;let nextFrame=0,lastMii=null;const m={minDist:Infinity,stopS:0,ghostStopS:0,unalertedS:0,minV:Infinity,deadT:null,deadZ:null,firstAlert:null,firstClose:null,alerts:0,falseAlerts:0,arrivalT:null,trackFlicker:0};
+ const alert=(t0,tr,rank,text,type='alert')=>events.push({t:+t0.toFixed(2),key:tr.key,pid:tr.pid,rank,text,type,fake:!tr.person||tr.ghost,d:tr.d,src:tr.src});
+ const fi=cs.frameInterval||0;let nextFrame=0,lastMii=null;const m={minDist:Infinity,stopS:0,ghostStopS:0,unalertedS:0,minV:Infinity,deadT:null,deadZ:null,firstAlert:null,firstAlertD:null,firstClose:null,entrySpeed:null,alerts:0,falseAlerts:0,arrivalT:null,trackFlicker:0,lidarOnlyAlerts:0};
  const steps=Math.round(cs.duration/DT);
  for(let n=0;n<=steps;n++){t=n*DT;
-  const people=cs.people||[],camZ=z+CAM,pos=people.map(p=>posAt(p,t));
+  const people=cs.people||[],pos=people.map(p=>posAt(p,t));
+  const x=lidOn?routeX(cs,z):0,yaw=lidOn?routeYaw(cs,z):0,fx=Math.sin(yaw),fz=Math.cos(yaw),camX=x+fx*CAM,camZ=z+fz*CAM,lidX=x+fx*LID.fwd,lidZ=z+fz*LID.fwd;
+  const lidSee=(px,pz)=>{if(!lidOn)return null;const r=rel(px,pz,lidX,lidZ,yaw),d=Math.hypot(r.X,r.Zc);return(Math.abs(Math.atan2(r.X,r.Zc))<Math.PI-LID.blind&&d<LID.range&&d>.1)?{...r,d}:null;};
   let nYolo=0,rejected=[];
   /* ---------- MII frame ---------- */
-  if(!dead&&t>=nextFrame-1e-9){const dtF=lastMii?t-lastMii:DT;lastMii=t;nextFrame=fi?t+fi:t;
+  const camDue=!dead&&t>=nextFrame-1e-9;if(camDue){nextFrame=fi?t+fi:t;}
+  if(camDue||(!dead&&lidOn)){
    const dets=[],fbs=[],pst={};
-   people.forEach((p,k)=>{const X=pos[k].x,Zc=pos[k].z-camZ,d=Math.hypot(X,Zc),inF=Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d<7;if(!inF){pst[p.id]='out of camera view';return;}
-    const miss=cs.dark||inWin(p.miss,t)||d<.3,k0=p.keys[0],learned=V.bgModel&&!V.bgTrusted&&p.startup&&Math.hypot(pos[k].x-k0[1],pos[k].z-k0[2])<.25;
-    pst[p.id]='tracked by YOLO';if(!miss&&d<=6){if(learned){rejected.push({p,X,Zc,d,why:'G2 background match'});pst[p.id]='rejected as background (G2 gate)';}else{dets.push({p,X,Zc,d,pos:pos[k]});nYolo++;}}
-    else{pst[p.id]=(cs.dark?'RGB detector blind (dark)':d<.3?'too close for the detector':'detector miss');if(d>=.15&&d<=.9&&!learned){fbs.push({key:'F'+p.id,person:true,id:p.id,X,Zc,d});pst[p.id]+=', depth fallback';}}});
-   (cs.statics||[]).forEach(s=>{if(!s.solid)return;const X=s.x,Zc=s.z-camZ,d=Math.hypot(X,Zc);if(Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d>=.15&&d<=.9&&(!V.bgModel||t<V.warmup))fbs.push({key:'F'+s.id,person:false,id:s.id,X,Zc,d});});
+   people.forEach((p,k)=>{const rc=rel(pos[k].x,pos[k].z,camX,camZ,yaw),X=rc.X,Zc=rc.Zc,d=Math.hypot(X,Zc),inF=Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d<7,L=lidSee(pos[k].x,pos[k].z);let camDet=false;
+    if(!inF)pst[p.id]='out of camera view';else if(!camDue)pst[p.id]='between camera frames';
+    else{const miss=cs.dark||inWin(p.miss,t)||d<.3,k0=p.keys[0],learned=V.bgModel&&!V.bgTrusted&&p.startup&&Math.hypot(pos[k].x-k0[1],pos[k].z-k0[2])<.25;
+     pst[p.id]='tracked by YOLO';if(!miss&&d<=6){if(learned){if(L)pst[p.id]='camera rejected her as background (G2), LiDAR legs overrule';else{rejected.push({p,X,Zc,d,why:'G2 background match'});pst[p.id]='rejected as background (G2 gate)';}}else{dets.push({p,X,Zc,d,pos:pos[k],src:L?'both':'camera'});nYolo++;camDet=true;}}
+     else{pst[p.id]=(cs.dark?'RGB detector blind (dark)':d<.3?'too close for the detector':'detector miss');if(d>=.15&&d<=.9&&!learned&&!L){fbs.push({key:'F'+p.id,person:true,id:p.id,X,Zc,d});pst[p.id]+=', depth fallback';}}}
+    if(L&&!camDet){dets.push({p,X:L.X,Zc:L.Zc,d:L.d,pos:pos[k],src:'lidar'});pst[p.id]+=', LiDAR legs track';}else if(L&&camDet)pst[p.id]+=' + LiDAR legs';else if(lidOn&&!L)pst[p.id]+=' (in LiDAR blind sector)';});
+   if(camDue)(cs.statics||[]).forEach(s=>{if(!s.solid)return;const rc=rel(s.x,s.z,camX,camZ,yaw),X=rc.X,Zc=rc.Zc,d=Math.hypot(X,Zc);if(Zc>.05&&Math.abs(Math.atan2(X,Zc))<HFOV&&d>=.15&&d<=.9&&(!V.bgModel||t<V.warmup)){if(lidOn&&s.kind!=='glass')rejected.push({p:{id:s.id},X,Zc,d,why:'LiDAR map: static object, not a person'});else fbs.push({key:'F'+s.id,person:false,id:s.id,X,Zc,d});}});
    const enc=dets.some(q=>q.d<1.5&&q.X>.2)&&dets.some(q=>q.d<1.5&&q.X<-.2),seen=new Set();
    for(const q of dets){const key='T'+q.p.id;seen.add(key);let tr=S.tracks.get(key);
-    if(tr&&V.reconfirm&&q.p.ghost&&t>=q.p.ghost[0]&&t<=q.p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;pst[q.p.id]='left, ghost track kept alive';continue;}if(!tr){tr={key,pid:q.p.id,kind:'yolo',person:true,firstT:t,hist:[],rank:0,lowSince:null,r5Since:null,lastAlert:-1e9,trig:0,mature:false,lastSeen:t,dLast:null,ghost:false,muted:false,label:''};S.tracks.set(key,tr);}
+    if(tr&&V.reconfirm&&!lidOn&&q.p.ghost&&t>=q.p.ghost[0]&&t<=q.p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;pst[q.p.id]='left, ghost track kept alive';continue;}if(!tr){tr={key,pid:q.p.id,kind:'yolo',person:true,firstT:t,hist:[],rank:0,lowSince:null,r5Since:null,lastAlert:-1e9,trig:0,mature:false,lastSeen:t,dLast:null,ghost:false,muted:false,label:'',src:q.src};S.tracks.set(key,tr);}
+    tr.src=q.src;
     const dtp=t-tr.lastSeen,jump=tr.dLast==null?0:Math.abs(q.d-tr.dLast),thr=V.adaptive?Math.max(.4,VMAXP*dtp):.4;
-    if(V.gates&&!(V.immunity&&tr.mature)&&jump>thr){if(!V.adaptive){tr.firstT=t;tr.mature=false;tr.hist=[];tr.rank=0;tr.lowSince=null;tr.r5Since=null;m.trackFlicker++;}tr.dLast=q.d;tr.lastSeen=t;tr.gated=true;pst[q.p.id]='track reset by depth-jump gate';continue;}
+    if(V.gates&&q.src!=='lidar'&&!(V.immunity&&tr.mature)&&jump>thr){if(!V.adaptive){tr.firstT=t;tr.mature=false;tr.hist=[];tr.rank=0;tr.lowSince=null;tr.r5Since=null;m.trackFlicker++;}tr.dLast=q.d;tr.lastSeen=t;tr.gated=true;pst[q.p.id]='track reset by depth-jump gate';continue;}
     tr.gated=false;pst[q.p.id]='tracked by YOLO'+(tr.mature?' (mature)':'');tr.mature=t-tr.firstT>=.15;tr.hist.push({t,x:q.pos.x,z:q.pos.z});while(tr.hist.length>1&&(t-tr.hist[0].t>.6&&tr.hist.length>2||tr.hist.length>8))tr.hist.shift();
     tr.dLast=q.d;tr.lastSeen=t;tr.ghost=false;tr.d=q.d;tr.X=q.X;tr.Zc=q.Zc;
-    const vz=-slope(tr.hist.map(h=>[h.t,Math.hypot(h.x,h.z-camZ)])),dp=q.d-vz*H_PRED;tr.vz=vz;
+    const vz=-slope(tr.hist.map(h=>{const r=rel(h.x,h.z,camX,camZ,yaw);return[h.t,Math.hypot(r.X,r.Zc)];})),dp=q.d-vz*H_PRED;tr.vz=vz;
     let raw=0;if(q.d<1)raw=5;else if(q.d<1.5&&(vz>.7||enc))raw=4;else if(q.d<1.5)raw=3;else if(dp<1&&vz>.3)raw=2;else if(vz>.7&&q.d<3)raw=1;
-    if(tr.trig>=3&&raw>=2)raw=5;tr.raw=raw;tr.label='ID:'+tr.pid+' '+RANKS[raw]+' '+side(q.X)+' '+q.d.toFixed(2)+'m';}
+    if(tr.trig>=3&&raw>=2)raw=5;tr.raw=raw;tr.label='ID:'+tr.pid+' '+RANKS[raw]+' '+side(q.X)+' '+q.d.toFixed(2)+'m'+(q.src==='lidar'?' (LiDAR)':'');}
    /* fallback (depth-change) tracks */
    const fseen=new Set();for(const f of fbs){fseen.add(f.key);let tr=S.tracks.get(f.key);if(!tr){tr={key:f.key,pid:f.id,kind:'fallback',person:f.person,firstT:t,hist:[],rank:0,lowSince:null,r5Since:null,lastAlert:-1e9,trig:0,mature:true,lastSeen:t,ghost:false,muted:false};S.tracks.set(f.key,tr);}
     tr.lastSeen=t;tr.d=f.d;tr.X=f.X;tr.Zc=f.Zc;tr.vz=0;tr.raw=5;tr.label='PERSON '+side(f.X)+' '+f.d.toFixed(2)+'m';}
    /* lost tracks, ghost loop */
    for(const [key,tr] of [...S.tracks]){if(seen.has(key)||fseen.has(key))continue;const p=(cs.people||[]).find(q=>'T'+q.id===key);
-    if(tr.kind==='yolo'&&V.reconfirm&&p&&p.ghost&&t>=p.ghost[0]&&t<=p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;continue;}
+    if(tr.kind==='yolo'&&V.reconfirm&&!lidOn&&p&&p.ghost&&t>=p.ghost[0]&&t<=p.ghost[1]){tr.lastSeen=t;tr.ghost=true;tr.raw=tr.rank;continue;}
     const lost=t-tr.lastSeen,keep=tr.kind==='fallback'?.5:V.buffer;if(lost>keep){S.tracks.delete(key);}else if(tr.kind==='fallback')tr.raw=0;else tr.raw=tr.rank;}
    /* state machine, alerts */
    for(const tr of S.tracks.values()){if(tr.gated&&!tr.rank)continue;const raw=tr.raw??0;
     if(raw>=tr.rank){if(raw>tr.rank){const was=tr.rank;tr.rank=raw;if(was<2&&raw>=2)tr.trig++;if(raw>=1&&raw<5)alert(t,tr,raw,SPEECH[raw]);if(raw===5){tr.r5Since=t;tr.lastAlert=t;alert(t,tr,5,'Move away immediately');}}tr.lowSince=null;}
     else{if(tr.lowSince==null)tr.lowSince=t;if(t-tr.lowSince>=.5-1e-9){if(tr.rank===5){tr.r5Since=null;tr.muted=false;}tr.rank=raw;tr.lowSince=null;}}
     if(tr.rank===5&&tr.r5Since!=null&&t-tr.lastAlert>=15-1e-9){const ph=t-tr.r5Since;tr.lastAlert=t;if(ph<45)alert(t,tr,5,'Move away immediately');else if(ph<75)alert(t,tr,5,'Please clear the path');else if(!tr.muted){tr.muted=true;alert(t,tr,5,'Audio muted, visual indicator only','visual');}}}
-   lastMii={t,tracks:[...S.tracks.values()].map(tr=>({key:tr.key,pid:tr.pid,kind:tr.kind,rank:tr.rank,d:tr.d,vz:tr.vz||0,label:tr.label||'',ghost:tr.ghost,person:tr.person,mature:tr.mature,X:tr.X,Zc:tr.Zc})),nYolo,pst,rejected:rejected.map(r=>({pid:r.p.id,d:r.d,X:r.X,Zc:r.Zc,why:r.why}))};}
+   lastMii={t,tracks:[...S.tracks.values()].map(tr=>({key:tr.key,pid:tr.pid,kind:tr.kind,src:tr.src||'camera',rank:tr.rank,d:tr.d,vz:tr.vz||0,label:tr.label||'',ghost:tr.ghost,person:tr.person,mature:tr.mature,X:tr.X,Zc:tr.Zc})),nYolo,pst,rejected:rejected.map(r=>({pid:r.p.id,d:r.d,X:r.X,Zc:r.Zc,why:r.why}))};}
   /* ---------- robot ---------- */
   const mii=lastMii||{tracks:[],nYolo:0,pst:{},rejected:[]};let worst=0;for(const tr of mii.tracks)worst=Math.max(worst,tr.rank);
   let vnav=0;if(t>=plan.startT)vnav=Math.min(prof.vmax,Math.sqrt(Math.max(0,2*prof.dec*(plan.goalZ-z))));
-  let vlid=Infinity;const obst=[];people.forEach((p,k)=>obst.push([pos[k].x,pos[k].z]));(cs.statics||[]).forEach(s=>{if(s.solid)obst.push([s.x,s.z]);});
-  for(const [ox,oz] of obst){const Zc=oz-camZ;if(Math.abs(ox)<.55&&Zc>0)vlid=Math.min(vlid,Math.sqrt(2*1.5*Math.max(0,Zc-.35)));}
-  let target=Math.min(vnav,vlid),cap=Infinity;if(resp==='supervised'&&!dead){cap=CAP[worst];target=Math.min(target,cap);}
-  const dec=vlid<vnav?1.5:prof.dec;let wanted=clamp(target,v-dec*DT,v+prof.acc*DT),supState='ok',pcap=C.powerCap(C.ocv(soc,prof.cells),R,prof.imax,lim.guard);
+  let vlid=Infinity;const obst=[];people.forEach((p,k)=>obst.push([pos[k].x,pos[k].z]));(cs.statics||[]).forEach(s=>{if(s.solid)footprint(s).forEach(q=>obst.push(q));});
+  for(const [ox,oz] of obst){const r=rel(ox,oz,camX,camZ,yaw);if(Math.abs(r.X)<.55&&r.Zc>0)vlid=Math.min(vlid,Math.sqrt(2*1.5*Math.max(0,r.Zc-.35)));}
+  let vplan=Infinity,yieldWhy=null;if(lidOn&&t>=plan.startT){people.forEach((p,k)=>{if(!lidSee(pos[k].x,pos[k].z))return;const q0=posAt(p,t-DT),vx=(pos[k].x-q0.x)/DT,vz=(pos[k].z-q0.z)/DT;if(Math.hypot(vx,vz)<.2)return;
+    for(let tau=0;tau<=3;tau+=.25){const r=rel(pos[k].x+vx*tau,pos[k].z+vz*tau,camX,camZ,yaw);if(Math.abs(r.X)<.9&&r.Zc>-.3&&r.Zc<6){vplan=Math.min(vplan,r.Zc<2.2?.15:.3);yieldWhy=yieldWhy||p;break;}}});}
+  if(yieldWhy){if(!yielding)events.push({t:+t.toFixed(2),key:'nav',pid:yieldWhy.id,rank:0,text:'Planner yields: '+yieldWhy.kind+' '+yieldWhy.id+' is walking into the planned path',type:'nav',fake:false});yieldUntil=t+1.0;yieldV=vplan;}else if(t<yieldUntil)vplan=yieldV;yielding=t<yieldUntil;
+  let target=Math.min(vnav,vlid,vplan),cap=Infinity;if(resp==='supervised'&&!dead){cap=CAP[worst];target=Math.min(target,cap);}
+  const dec=vlid<vnav?1.5:vplan<vnav?1.0:prof.dec;let wanted=clamp(target,v-dec*DT,v+prof.acc*DT),supState='ok',pcap=C.powerCap(C.ocv(soc,prof.cells),R,prof.imax,lim.guard);
   if(!dead&&powerSup){if(n===0){sup.voc=C.ocv(soc,prof.cells);sup.tSample=t;}const d=sup.decide(t,wanted,v,DT,cs.payload||0);supState=d.state;pcap=d.powerCap;if(d.state==='park')wanted=0;else if(d.speedLimit<wanted)wanted=Math.max(0,d.speedLimit);}
   if(dead)wanted=0;
   const gr=(cs.grade||[]).reduce((a,[z0,z1,g])=>z>=z0&&z<=z1?a+g:a,0),P=C.drawPower(wanted,(wanted-v)/DT,mass,prof)+mass*9.81*gr*Math.max(0,wanted)/prof.eta,e=C.supply(P,C.ocv(soc,prof.cells),R);
   if(!dead){vt=e.v;it=e.i;minV=Math.min(minV,vt);soc=Math.max(0,soc-e.i*DT/(prof.capacity_ah*3600));if(vt<lim.vmin||e.collapse){lossS+=DT;if(lossS>=.3-1e-9){dead=true;deadT=t;m.deadT=t;m.deadZ=z;events.push({t:+t.toFixed(2),key:'power',pid:0,rank:0,text:'Supply loss: pack voltage fell below '+lim.vmin.toFixed(1)+' V',type:'power',fake:false});}}else lossS=0;if(powerSup)sup.update(t,vt,it);}
   v=dead?0:wanted;
-  samples.push({t,z,v,vnav,vlid:isFinite(vlid)?vlid:null,cap:isFinite(cap)?cap:null,vt,it,soc,pcap,supState,dead,worst,ppl:pos.map((q,k)=>({id:people[k].id,x:q.x,z:q.z})),mii});
+  samples.push({t,z,x,yaw,lidar:lidOn,yielding,vplan:isFinite(vplan)?vplan:null,v,vnav,vlid:isFinite(vlid)?vlid:null,cap:isFinite(cap)?cap:null,vt,it,soc,pcap,supState,dead,worst,ppl:pos.map((q,k)=>({id:people[k].id,x:q.x,z:q.z})),mii});
   /* metrics */
-  people.forEach((p,k)=>{const d=Math.hypot(pos[k].x,pos[k].z-camZ),Zc=pos[k].z-camZ;if(Zc>0&&Math.abs(pos[k].x)<2)m.minDist=Math.min(m.minDist,d);
-   if(d<1.5&&Zc>.05&&Math.abs(Math.atan2(pos[k].x,Zc))<HFOV){if(m.firstClose==null)m.firstClose=t;const alerted=mii.tracks.some(tr=>tr.person&&String(tr.pid)===String(p.id)&&tr.rank>=3&&!tr.ghost);if(!alerted)m.unalertedS+=DT;}});
+  people.forEach((p,k)=>{const rc=rel(pos[k].x,pos[k].z,camX,camZ,yaw),d=Math.hypot(rc.X,rc.Zc),Zc=rc.Zc;if(Zc>0&&Math.abs(rc.X)<2)m.minDist=Math.min(m.minDist,d);if(m.entrySpeed==null&&Math.abs(rc.X)<.55&&Zc>0&&Zc<3&&t>=plan.startT&&(plan.goalZ-z)>.5)m.entrySpeed=v;
+   if(d<1.5&&Zc>.05&&Math.abs(Math.atan2(rc.X,Zc))<HFOV){if(m.firstClose==null)m.firstClose=t;const alerted=mii.tracks.some(tr=>tr.person&&String(tr.pid)===String(p.id)&&tr.rank>=3&&!tr.ghost);if(!alerted)m.unalertedS+=DT;}});
   if(v<.02&&t>=plan.startT&&(plan.goalZ-z)>.3){m.stopS+=DT;if(mii.tracks.some(tr=>tr.rank>=4&&(tr.ghost||!tr.person)))m.ghostStopS+=DT;}
   z+=v*DT;if(m.arrivalT==null&&plan.goalZ>0&&z>=plan.goalZ-.05)m.arrivalT=t;}
- const al=events.filter(e=>e.type==='alert');m.alerts=al.length;m.falseAlerts=al.filter(e=>e.fake).length;const fa=al.find(e=>!e.fake);m.firstAlert=fa?fa.t:null;m.minV=minV;m.finalZ=z;m.dead=dead;
+ const al=events.filter(e=>e.type==='alert');m.alerts=al.length;m.falseAlerts=al.filter(e=>e.fake).length;const fa=al.find(e=>!e.fake);m.firstAlert=fa?fa.t:null;m.firstAlertD=fa?fa.d:null;m.lidarOnlyAlerts=al.filter(e=>!e.fake&&e.src==='lidar').length;m.minV=minV;m.finalZ=z;m.dead=dead;
  return{samples,events,metrics:m,cfg,V};}
 
 /* ---------------- the cases ---------------- */
@@ -128,7 +146,18 @@ const CASES=[
  payload:140,soc:.36,profile:{resistance:.23},grade:[[20,38,.04]],
  people:[walk(1,'visitor',[[0,1.75,8],[4,1.75,8],[6.5,.2,8],[14,.2,8],[17,-1.7,8.2],[40,-1.7,8.2]]),walk(2,'visitor',[[0,-1.75,18],[14,-1.75,18],[17,-.2,18],[25,-.2,18],[28,1.7,18.2],[50,1.7,18.2]]),walk(3,'visitor',[[0,1.75,28],[24,1.75,28],[27,.2,28],[36,.2,28],[39,-1.7,28.2],[60,-1.7,28.2]])],statics:[],plan:{startT:1,goalZ:38},duration:110,
  pass:(m)=>({ok:!m.dead&&m.arrivalT!=null,why:m.dead?'Supply loss at '+m.deadT.toFixed(0)+' s, '+m.deadZ.toFixed(0)+' m along the corridor. The robot stopped for good in the lane.':m.arrivalT!=null?'Arrived at '+m.arrivalT.toFixed(0)+' s with minimum '+m.minV.toFixed(1)+' V.':'Did not arrive.'})}
+
+,{id:'J',n:10,tag:'lidar',title:'Side approach: a visitor comes out of a door beside the robot',
+ story:'A visitor waits in a doorway to the robot\'s left, outside the camera\'s 80 degree view, and steps into the lane when the robot is two metres away. With the camera alone the person appears at 1.5 m and the first warning is a shout. With the front LiDAR their legs are tracked from the doorway onwards and the planner sees them walking into its path, so the robot is already crawling when they step out.',
+ chapter:'Add-on: the camera sees 80 degrees ahead; the LiDAR at 0.29 m covers 316 degrees and reports people before the camera can.',
+ people:[walk(1,'visitor',[[0,-1.85,13],[17,-1.85,13],[20.5,1.6,13.3],[60,1.6,13.3]])],statics:[],plan:{startT:1,goalZ:30},duration:60,
+ pass:(m)=>({ok:m.entrySpeed!=null&&m.entrySpeed<=.32&&m.minDist>.45,why:m.entrySpeed==null?'The visitor never entered the lane.':m.entrySpeed<=.32?'Robot had already slowed to '+m.entrySpeed.toFixed(2)+' m/s when the visitor stepped into the lane; kept '+m.minDist.toFixed(2)+' m clear.':'Robot was still doing '+m.entrySpeed.toFixed(2)+' m/s when the visitor stepped into the lane; the first warning came at '+(m.firstAlertD||0).toFixed(1)+' m.'})},
+{id:'K',n:11,tag:'lidar',title:'A parked bed blocks half the corridor',
+ story:'A bed has been left along the right wall and a nurse stands further on. Today the LiDAR is only a stop sensor: the robot halts 0.35 m from the bed and waits forever. With the LiDAR mapping the corridor (SLAM) the navigation stack plans a detour around the bed, keeps the nurse at a safe distance, and arrives.',
+ chapter:'Add-on: a map and a planner. The safety layer and the power supervisor keep running on top of the planned path.',
+ people:[walk(1,'nurse',[[0,1.6,21]])],statics:[{id:'bed',kind:'bed',x:1.0,z:15,w:.95,l:2.1,solid:true}],route:[[10,0],[12.5,-1.05],[17,-1.05],[19.5,0]],plan:{startT:1,goalZ:30},duration:70,
+ pass:(m)=>({ok:m.arrivalT!=null&&m.falseAlerts===0,why:m.arrivalT!=null?'Detoured around the bed and arrived at '+m.arrivalT.toFixed(0)+' s.':'Stopped in front of the bed and never arrived (no map, no detour).'})}
 ];
-return{simulate,CASES,VERSIONS,RANKS,CAP,posAt,DT};
+return{simulate,CASES,VERSIONS,SENSORS,LID,RANKS,CAP,posAt,routeX,routeYaw,footprint,DT};
 })();
 if(typeof module!=='undefined')module.exports=MII;
