@@ -56,8 +56,8 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
 <body>
 <main>
 <h1>Ward deployment cases: people, alerts and power</h1>
-<p class="sub">Eleven scripted hospital situations for a robot towing a trolley. Each one runs the Chapter 5 safety layer (the six danger states, the alert chain) and the battery power supervisor, so you can watch who is where, what the layer decided, and what the robot did.</p>
-<div class="banner"><strong>These are simulations, not recordings.</strong> The people, their paths and the moments the camera misses them are scripted for each case. The danger ladder, time constants and version differences come from Chapter 5. The robot slowing down in response to alerts, the LiDAR layout, the map and the planner are extensions proposed here: the chapter's layer only warns. Switch them off below to see the layer as deployed.</div>
+<p class="sub">Eleven scripted hospital situations for a robot towing a trolley. Each one runs the MII safety layer (the six danger states, the alert chain) and the battery power supervisor, so you can watch who is where, what the layer decided, and what the robot did.</p>
+<div class="banner"><strong>These are simulations, not recordings.</strong> The people, their paths and the moments the camera misses them are scripted for each case. The danger ladder, time constants and version differences are the MII layer's own rules. The robot slowing down in response to alerts, the LiDAR layout, the map and the planner are extensions proposed here: the MII layer itself only warns. Switch them off below to see the layer as deployed.</div>
 <section class="card" id="design">
  <h2>Sensor layout: what we have and what we propose</h2>
  <p class="sub">Measured on the Genesis CAD: chassis 666 x 672 mm, deck rim at 175 mm, rear tyres 262 mm, motors 222 mm, and a free bay about 200 mm deep at the front centre. The mast and the towed trolley are not in the CAD, so their sizes are assumptions.</p>
@@ -126,7 +126,7 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
 
 <section class="card">
  <h2>All nine cases as an acceptance suite</h2>
- <p class="note">Each case is a pass or fail test with a stated criterion. A new version of the safety layer should pass all of them before it goes near a ward. The earlier versions fail exactly the cases that exposed their bugs in the chapter. The right-hand block shows the same tests with the proposed LiDAR layout.</p>
+ <p class="note">Each case is a pass or fail test with a stated criterion. A new version of the safety layer should pass all of them before it goes near a ward. The earlier versions fail exactly the cases that exposed their bugs during development. The right-hand block shows the same tests with the proposed LiDAR layout.</p>
  <div style="overflow-x:auto"><table id="suite"></table></div>
 </section>
 
@@ -134,7 +134,7 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
  <div class="card"><h2>How these cases go onto a ward</h2>
   <ol class="l">
    <li><b>Simulation (this page).</b> All nine cases pass on the version you plan to deploy.</li>
-   <li><b>Bench drills.</b> Staff volunteers stand at marked distances (0.78 m, 1.07 m, 1.62 m, as in the chapter's figures) with the robot's wheels off the ground. The states must match the ladder.</li>
+   <li><b>Bench drills.</b> Staff volunteers stand at marked distances (0.78 m, 1.07 m and 1.62 m) with the robot's wheels off the ground. The states must match the ladder.</li>
    <li><b>Ward shadow mode.</b> The layer runs during normal work and only logs. Count false alerts per hour and unflagged close approaches. Nothing is commanded.</li>
    <li><b>Advisory.</b> Spoken and visual alerts on, staff briefed that the stop button always works.</li>
    <li><b>Motion response.</b> Slowing or stopping for alerts is a separate, separately approved pilot.</li>
@@ -142,8 +142,8 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
  <div class="card"><h2>What this page does not cover</h2>
   <ul class="l">
    <li>Real YOLO behaviour. Misses, the dark and the 0.3 m blind zone are scripted rules, not a model.</li>
-   <li>The LSTM intent classifier and the shoulder-keypoint facing check. Only the distance and speed rules of Table 5.1 are modelled.</li>
-   <li>Assumed here, not in the chapter: a 1.5 s prediction horizon, CAUTION only within 3 m, an 80 degree camera field of view, and the speed caps used when the robot responds.</li>
+   <li>The intent classifier and the shoulder-keypoint facing check. Only the distance and speed rules of the danger ladder are modelled.</li>
+   <li>Assumptions of this simulation: a 1.5 s prediction horizon, CAUTION only within 3 m, an 80 degree camera field of view, and the speed caps used when the robot responds.</li>
    <li>Spoken phrases other than "Move away immediately" and "Please clear the path" are illustrative.</li>
    <li>Crowds, beds, wheelchairs, lifts and doors, and any person behind the robot or outside the camera view.</li>
   </ul></div>
@@ -323,7 +323,7 @@ function outcome(){const cs=S.cs,vs=variants(),cur=v=>Object.keys(v.cfg).every(k
   row('Acceptance test',x=>'<span class="pp '+(x.p.ok?'ok':'bad')+'">'+(x.p.ok?'PASS':'FAIL')+'</span> <span class="note">'+esc(x.p.why)+'</span>');
  $('outc').innerHTML=h;$('outc').querySelectorAll('th.vcol').forEach(th=>th.onclick=()=>{Object.assign(S.cfg,JSON.parse(th.dataset.k));reload(true);});}
 function suite(){const vs=Object.values(M.VERSIONS),lay=[['cam','Current layout'],['fused','Proposed: LiDAR + camera']];let h='<tr><th rowspan="2">Case</th><th rowspan="2">Acceptance criterion</th>'+lay.map(l=>'<th colspan="3" style="text-align:center">'+l[1]+'</th>').join('')+'</tr><tr>'+lay.map(()=>vs.map(v=>'<th>'+v.name.split(' ')[0]+'</th>').join('')).join('')+'</tr>';
- const crit={A:'No alerts for people who only stand nearby',B:'Visitor flagged before reaching 1.5 m, robot keeps clear',C:'MOVE AWAY repeats, changes wording, then mutes with a visual cue',D:'No false alerts on furniture after the 0.5 s warm-up',E:'A person standing at boot is flagged within 2 s',F:'Alert and hold end when the person leaves',G:'In the dark, a warning still comes before contact',H:'Person still flagged at 0.5 fps',I:'Robot reaches the goal without losing power',J:'Robot already at 0.3 m/s or less when a person steps in from the side',K:'Robot gets round a parked bed and arrives'};
+ const crit={A:'No alerts for people who only stand nearby',B:'Visitor flagged before reaching 1.5 m, robot keeps clear',C:'MOVE AWAY repeats, changes wording, then mutes with a visual cue',D:'No false alerts on furniture after the 0.5 s warm-up',E:'A person standing at boot is flagged within 2 s',F:'Alert and hold end when the person leaves',G:'In the dark, a warning still comes before contact',H:'Person still flagged at 0.5 fps',I:'Robot completes the run without losing power',J:'Robot already at 0.3 m/s or less when a person steps in from the side',K:'Robot gets round a parked bed and arrives'};
  const cell=ok=>'<td><span class="pp '+(ok?'ok':'bad')+'">'+(ok?'PASS':'FAIL')+'</span></td>';
  M.CASES.forEach(cs=>{h+='<tr><td><b>'+cs.n+'</b> '+esc(cs.title)+'</td><td class="note">'+crit[cs.id]+'</td>'+lay.map(l=>vs.map(v=>{if(cs.id==='I'){if(v.id!=='v60')return'<td class="note">same in every version</td>';const a=sim(cs,{version:v.id,response:S.cfg.response,powerSup:false,sensors:l[0]}),b=sim(cs,{version:v.id,response:S.cfg.response,powerSup:true,sensors:l[0]}),pa=cs.pass(a.metrics,a.events).ok,pb=cs.pass(b.metrics,b.events).ok;return'<td>supervisor off <span class="pp '+(pa?'ok':'bad')+'">'+(pa?'PASS':'FAIL')+'</span><br>supervisor on <span class="pp '+(pb?'ok':'bad')+'">'+(pb?'PASS':'FAIL')+'</span></td>';}
   const r=sim(cs,{version:v.id,response:S.cfg.response,powerSup:true,sensors:l[0]});return cell(cs.pass(r.metrics,r.events).ok);}).join('')).join('')+'</tr>';});
@@ -348,13 +348,14 @@ function coverage(){const cv=$('cov'),c=cv.getContext('2d'),W=cv.width,H=cv.heig
   for(const r of [1,1.5]){c.strokeStyle=r===1?'#ff2d55':'#ffb020';c.lineWidth=1.5;c.beginPath();c.arc(cx,cy-.27*sc,r*sc,0,Math.PI*2);c.stroke();}
   c.fillStyle=mute;c.font='13px system-ui,sans-serif';const cap=prop?['LiDAR 316 degrees (teal), camera 80 degrees (blue)','rear 44 degrees blind behind the trolley (red)']:['camera 80 degrees (blue) and a stop lane','nothing to the sides or behind'];c.fillText(cap[0],cx,H-30);c.fillText(cap[1],cx,H-12);c.textAlign='left';};
  panel(W/4,H/2+20,'Current layout',false);panel(3*W/4,H/2+20,'Proposed layout',true);}
-function reload(keepT){segs();$('selR').value=S.cfg.response;run();if(!keepT){S.T=0;S.playing=false;$('play').textContent='Play';}$('cTitle').textContent=S.cs.n+'. '+S.cs.title;const tg=$('cTag');tg.textContent=TAGN[S.cs.tag];tg.className='tag '+S.cs.tag;$('story').textContent=S.cs.story;$('chap').textContent='Chapter 5 link: '+S.cs.chapter;
+function reload(keepT){segs();$('selR').value=S.cfg.response;run();if(!keepT){S.T=0;S.playing=false;$('play').textContent='Play';}$('cTitle').textContent=S.cs.n+'. '+S.cs.title;const tg=$('cTag');tg.textContent=TAGN[S.cs.tag];tg.className='tag '+S.cs.tag;$('story').textContent=S.cs.story;$('chap').textContent=S.cs.chapter;
  if(G.ok&&!keepT)loadScene();outcome();suite();addons();$('seek').max=1000;frame();document.querySelectorAll('.cc').forEach(b=>b.classList.toggle('on',b.dataset.id===S.cs.id));}
 function pick(id){S.cs=M.CASES.find(c=>c.id===id);S.cfg={version:'v60',response:S.cfg.response,powerSup:true,sensors:S.cfg.sensors};reload(false);}
 $('cards').innerHTML=M.CASES.map(c=>'<button class="cc" data-id="'+c.id+'"><span class="nn">Case '+c.n+'</span><b>'+esc(c.title)+'</b><span class="tag '+c.tag+'">'+TAGN[c.tag]+'</span></button>').join('');
 document.querySelectorAll('.cc').forEach(b=>b.onclick=()=>{pick(b.dataset.id);window.scrollTo({top:$('stage').getBoundingClientRect().top+scrollY-90,behavior:'smooth'});});
 const ok3=ensure3D();if(!ok3){$('msg3d').style.display='flex';$('msg3d').textContent='3D is not available in this browser. The timeline, alert log, tables and every result below still work.';}
 coverage();matchMedia('(prefers-color-scheme:dark)').addEventListener('change',coverage);reload(false);requestAnimationFrame(tick);
+window.MIIDEMO={S,G,pick,reload,seek:seekTo,frame,cfg:(o)=>{Object.assign(S.cfg,o);reload(true);},view:(v)=>{$('selView').value=v;$('selView').onchange();}};
 })();
 </script>
 </body>

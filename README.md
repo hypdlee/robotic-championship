@@ -1,10 +1,15 @@
 # Robotic Championship: ward deployment cases
 
-Team Genesis, University of Malta. Interactive demo of how a hospital trolley robot behaves around people, using the Chapter 5 people-aware safety layer (MII) together with a battery power supervisor.
+Team Genesis, University of Malta. Interactive demo of how a hospital trolley robot behaves around people, using the MII people-aware safety layer together with a battery power supervisor.
 
 **Run it:** open [`index.html`](https://github.com/hypdlee/robotic-championship/blob/main/index.html), click the download icon (top right of the file view), then open the saved file in any browser. No server or install needed. (GitHub shows HTML files as code, so it cannot run the page itself.)
 
 ![Overview of the demo page](media/overview.png)
+
+## Pitch video and deck
+
+- `media/Genesis_Ward_Safety_Pitch.mp4`: 3-minute pitch video built from the simulation (synthetic narrator, burnt-in captions).
+- `Ward_Deployment_Cases.pptx`: 10-slide animated deck.
 
 ## What it shows
 
@@ -18,7 +23,7 @@ Eleven scripted ward situations, each runnable on three versions of the safety l
 6. The person has left but the alert stays
 7. Night ward: the camera cannot see
 8. Slow computer: the model runs at 0.5 frames per second
-9. Heavy trolley, low battery and three pedestrian stops
+9. Tired battery, 20 kg trolley and three pedestrian stops
 10. Side approach: a visitor steps out of a door beside the robot (LiDAR add-on)
 11. A parked bed blocks half the corridor: SLAM map and a detour (LiDAR add-on)
 
@@ -35,9 +40,9 @@ The page opens with the proposed layout, measured against the Genesis CAD: LiDAR
 ## Read this before relying on it
 
 - These are simulations driven by the chapter's rules, not recordings or real detector output.
-- Only the distance and speed rules of the danger ladder (Table 5.1) are modelled. The YOLO detector, the intent classifier and the facing check are not.
-- The LiDAR layout, the map, the planner and slowing the robot in response to alerts are proposed extensions. The chapter's layer only warns. The page has a switch for alerts-only.
-- Assumed here, not from the chapter: 1.5 s prediction horizon, CAUTION only within 3 m, an 80 degree camera view, and the speed caps used when the robot responds.
+- Only the distance and speed rules of the danger ladder are modelled. The YOLO detector, the intent classifier and the facing check are not.
+- The LiDAR layout, the map, the planner and slowing the robot in response to alerts are proposed extensions. The MII layer itself only warns. The page has a switch for alerts-only.
+- Assumptions of the simulation: 1.5 s prediction horizon, CAUTION only within 3 m, an 80 degree camera view, and the speed caps used when the robot responds.
 
 ## Files
 
