@@ -94,7 +94,7 @@ ul.l{margin:6px 0 0;padding-left:18px}ul.l li{margin:3px 0}
   <label>MII version<div class="seg" id="segV"></div></label>
   <label id="lPow" class="hide">Battery power supervisor<div class="seg" id="segP"></div></label>
   <label>Robot motion response<select id="selR"><option value="supervised">Slows or stops for alerts (proposed)</option><option value="alert">Alerts only (as in the chapter)</option></select></label>
-  <label>View<select id="selView"><option value="follow">Follow robot</option><option value="camera">Robot camera with detections</option><option value="overhead">Overhead</option></select></label>
+  <label>View<select id="selView"><option value="follow">Follow robot</option><option value="camera">Robot camera with detections</option><option value="overhead">Overhead</option><option value="closeup">Robot close-up (sensors)</option></select></label>
  </div>
  <div class="layout">
   <div>
@@ -605,8 +605,9 @@ function draw(){const sm=S.sim;if(!sm||!G.ok)return;const T=THREE,k=Math.min(sm.
   if(sp>.1)h.head=Math.atan2(dx,dz);else if(h.last==null||Math.hypot(p.x-rx,p.z-pos)<5)h.head=Math.atan2(rx-p.x,pos-p.z);h.grp.rotation.y=h.head;h.last=1;
   h.phase=p.z*3.4+p.x*3.4;const sw=Math.min(1,sp/.6)*.55;h.legs[0].rotation.x=Math.sin(h.phase)*sw;h.legs[1].rotation.x=-Math.sin(h.phase)*sw;h.arms[0].rotation.x=-Math.sin(h.phase)*sw*.8;h.arms[1].rotation.x=Math.sin(h.phase)*sw*.8;});
  light.position.set(rx-9,12,pos+12);light.target.position.set(rx,0,pos);light.target.updateMatrixWorld();
- const view=$('selView').value;G.walls.forEach(w=>{const full=view==='camera'||view==='follow';w.scale.y=full?1:.16;w.position.y=full?1.35:.216;});G.scene.fog=view==='overhead'?null:G.fog;
+ const view=$('selView').value;G.walls.forEach(w=>{const full=view==='camera'||view==='follow'||view==='closeup';w.scale.y=full?1:.16;w.position.y=full?1.35:.216;});G.scene.fog=view==='overhead'?null:G.fog;
  if(view==='camera'){cam.up.set(0,1,0);if(lid){const cx=rx+fwd[0]*LID.camFwd,cz=pos+fwd[1]*LID.camFwd,tl=Math.tan(LID.camTilt*Math.PI/180);cam.position.set(cx,LID.camH,cz);cam.lookAt(cx+fwd[0]*4,LID.camH-4*tl,cz+fwd[1]*4);}else{cam.position.set(rx+fwd[0]*.3,1.28,pos+fwd[1]*.3);cam.lookAt(rx+fwd[0]*9,1.1,pos+fwd[1]*9);}cam.fov=62;}
+ else if(view==='closeup'){cam.up.set(0,1,0);const d=Math.max(1.6,G.zoom*.3);cam.position.set(rx+Math.sin(G.angle)*d,.9+d*.25,pos+.1+Math.cos(G.angle)*d);cam.lookAt(rx,.5,pos+.05);cam.fov=50;}
  else if(view==='overhead'){cam.up.set(-1,0,0);cam.position.set(rx,9,pos+3.5);cam.lookAt(rx,0,pos+3.5);cam.fov=55;}
  else{cam.up.set(0,1,0);const d=G.zoom;cam.position.set(Math.max(-1.55,Math.min(1.55,rx+Math.sin(G.angle)*d)),1.5+d*.07,pos+1.5-Math.cos(G.angle)*d);cam.lookAt(rx,.8,pos+2.5);cam.fov=55;}
  cam.updateProjectionMatrix();G.fog.far=S.cs.dark?26:65;r.render(scene,cam);overlay(s,k,view);}
@@ -672,7 +673,7 @@ function tick(ts){if(S.playing){S.T=Math.min(S.cs.duration,S.T+(ts-S.last)/1000*
 $('play').onclick=()=>{if(S.playing){S.playing=false;$('play').textContent='Play';return;}if(S.T>=S.cs.duration)S.T=0;S.playing=true;S.last=performance.now();$('play').textContent='Pause';};
 $('seek').oninput=()=>{seekTo($('seek').value/1000*S.cs.duration);};
 const tl=$('tl');let tld=false;const tlSeek=e=>{const r=tl.getBoundingClientRect();seekTo((e.clientX-r.left)/r.width*S.cs.duration);};tl.addEventListener('pointerdown',e=>{tld=true;tl.setPointerCapture(e.pointerId);tlSeek(e);});tl.addEventListener('pointermove',e=>{if(tld)tlSeek(e);});tl.addEventListener('pointerup',()=>tld=false);
-$('selR').onchange=()=>{S.cfg.response=$('selR').value;reload(true);};$('selView').onchange=()=>{$('hint').textContent=$('selView').value==='follow'?'Drag to rotate, scroll to zoom':$('selView').value==='camera'?'What the robot camera sees, with the layer\'s detections':'Whole stretch from above';frame();};
+$('selR').onchange=()=>{S.cfg.response=$('selR').value;reload(true);};$('selView').onchange=()=>{$('hint').textContent={follow:'Drag to rotate, scroll to zoom',camera:'What the robot camera sees, with the layer\'s detections',overhead:'Whole stretch from above',closeup:'Drag to orbit the robot: LiDAR puck at the front, camera on the short post'}[$('selView').value];frame();};
 function segs(){const cs=S.cs,v=$('segV'),ss=$('segS');ss.innerHTML=[['cam','Current'],['fused','Proposed: LiDAR + camera']].map(x=>'<button data-s="'+x[0]+'" class="'+(S.cfg.sensors===x[0]?'on':'')+'">'+x[1]+'</button>').join('');ss.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.sensors=b.dataset.s;reload(true);});v.innerHTML=Object.values(M.VERSIONS).map(x=>'<button data-v="'+x.id+'" class="'+(S.cfg.version===x.id?'on':'')+'">'+x.name+'</button>').join('');v.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.version=b.dataset.v;reload(true);});
  $('lPow').classList.toggle('hide',cs.id!=='I');const p=$('segP');p.innerHTML=[['off','Off',false],['on','On',true]].map(x=>'<button data-p="'+x[0]+'" class="'+((S.cfg.powerSup!==false)===x[2]?'on':'')+'">'+x[1]+'</button>').join('');p.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cfg.powerSup=b.dataset.p==='on';reload(true);});}
 function variants(){const cs=S.cs;if(cs.tag==='lidar')return[{label:'Current layout',cfg:{sensors:'cam'}},{label:'Proposed: LiDAR + camera',cfg:{sensors:'fused'}}];return cs.id==='I'?[{label:'Power supervisor off',cfg:{powerSup:false}},{label:'Power supervisor on',cfg:{powerSup:true}}]:Object.values(M.VERSIONS).map(v=>({label:v.name,cfg:{version:v.id}}));}
