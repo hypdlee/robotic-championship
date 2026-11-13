@@ -6,6 +6,16 @@ Team Genesis, University of Malta. Interactive demo of how a hospital trolley ro
 
 ![Overview of the demo page](media/overview.png)
 
+## Robo arms: Robot Arm AI Challenge simulator
+
+The [`robo arms/`](robo%20arms/) folder holds a second, separate demo: a real-time browser simulation of the championship's **Robot Arm AI Challenge** (rulebook V0.6, section 5.8). Two SO-101-style arms play every round, scored live against the published tables, with a LeRobot-style panel showing observation cameras, joint state, action chunks, the chosen policy (ACT, Diffusion, SmolVLA) and an episode log.
+
+- Game 1 Pick-and-Place: Colour Sort, Shape Sort and Dynamic Sort, where the judge moves bins and nudges objects while the arms run.
+- Game 2 Two-Arm Coordination: Pouring, Folding, Wrap and Pack.
+- Final: Tower Construction Duel with 30 s whistle command windows, red block throws and collapses.
+
+**Run it:** download [`robo arms/index.html`](https://github.com/hypdlee/robotic-championship/blob/main/robo%20arms/index.html) and open it in any browser. Keys `1` to `7` select a round, `Space` pauses, `N` advances. Details and simplifications are in [`robo arms/README.md`](robo%20arms/README.md). With GitHub Pages enabled (see below) it also runs at https://hypdlee.github.io/robotic-championship/robo%20arms/.
+
 ## Pitch video and deck
 
 - `media/Genesis_Ward_Safety_Pitch.mp4`: 3-minute pitch video built from the simulation (synthetic narrator, burnt-in captions).
@@ -47,6 +57,7 @@ The page opens with the proposed layout, measured against the Genesis CAD: LiDAR
 ## Files
 
 - `index.html`: the whole demo in one file (also at `deployment-cases/deployment-cases.html`)
+- `robo arms/`: Robot Arm AI Challenge simulator (`index.html`) and its README
 - `media/`: preview images and animations used in this README
 - `deployment-cases/src/`: page template, simulation core (`cases_core.js`) and battery core (`core.js`)
 
