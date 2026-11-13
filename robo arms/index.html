@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IEEE Robot Arm AI Challenge 2026 — Live Simulator (LeRobot view)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0b0f17; --panel:#121826; --panel2:#0f1420; --line:#223047; --txt:#dbe4f3; --mut:#8a98b3;
+    --acc:#4fd1c5; --acc2:#f6ad55; --red:#f56565; --blue:#4299e1; --green:#48bb78; --yellow:#ecc94b; --pink:#ed64a6;
+    --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace; --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);height:100%}
+  header{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#0f1626,#0b0f17)}
+  header h1{font-size:15px;margin:0;font-weight:600;letter-spacing:.3px}
+  header h1 span{color:var(--acc)}
+  header .sub{font-size:12px;color:var(--mut)}
+  .wrap{display:grid;grid-template-columns:1fr 380px;gap:10px;padding:10px;height:calc(100% - 52px)}
+  .left{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+  .toolbar .grp{display:flex;gap:4px;align-items:center;padding:3px 6px;border-right:1px solid var(--line)}
+  .toolbar .grp:last-child{border-right:none}
+  .toolbar label{font-size:11px;color:var(--mut);margin-right:2px}
+  button{background:#1b2436;color:var(--txt);border:1px solid #2a3850;border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer;font-family:var(--sans)}
+  button:hover{border-color:var(--acc);color:#fff}
+  button.on{background:var(--acc);color:#04221f;border-color:var(--acc);font-weight:600}
+  button.warn.on{background:var(--acc2);border-color:var(--acc2);color:#2a1700}
+  select,input[type=range]{background:#1b2436;color:var(--txt);border:1px solid #2a3850;border-radius:7px;padding:4px;font-size:12px}
+  .stage{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:1;min-height:0}
+  canvas#main{display:block;width:100%;height:100%}
+  .right{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .card h3{margin:0 0 8px 0;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);display:flex;justify-content:space-between;align-items:center}
+  .card h3 .tag{font-family:var(--mono);font-size:10px;color:var(--acc);background:#0d2b28;border:1px solid #1b4b46;border-radius:5px;padding:1px 6px;text-transform:none;letter-spacing:0}
+  .score{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:12px}
+  .score .k{color:var(--mut)} .score .v{font-family:var(--mono);text-align:right}
+  .score .v.good{color:var(--green)} .score .v.bad{color:var(--red)} .score .v.big{font-size:20px;color:var(--acc)}
+  .obs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .obs canvas{width:100%;border-radius:6px;border:1px solid #243149;background:#000;display:block}
+  .obs .lab{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:3px}
+  .joints{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .joint{display:grid;grid-template-columns:74px 1fr 40px;gap:6px;align-items:center;font-family:var(--mono);font-size:10px;color:var(--mut);margin:3px 0}
+  .bar{height:7px;background:#1a2235;border-radius:4px;overflow:hidden;position:relative}
+  .bar i{position:absolute;left:50%;top:0;height:100%;background:var(--acc);border-radius:4px}
+  .bar.g i{background:var(--acc2)}
+  .log{font-family:var(--mono);font-size:10.5px;line-height:1.45;max-height:170px;overflow:auto;color:#aab7cf}
+  .log .ok{color:var(--green)} .log .bad{color:var(--red)} .log .ev{color:var(--acc2)} .log .sys{color:var(--acc)}
+  .insight{font-size:12px;line-height:1.5;color:#c9d4e6}
+  .insight b{color:var(--acc)}
+  .policy{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .pol{border:1px solid #2a3850;border-radius:8px;padding:7px;cursor:pointer;font-size:11px}
+  .pol:hover{border-color:var(--acc)} .pol.on{border-color:var(--acc);background:#0d2b28}
+  .pol b{display:block;font-size:12px;margin-bottom:2px}
+  .pol span{color:var(--mut);font-family:var(--mono);font-size:10px}
+  .feat{font-family:var(--mono);font-size:10.5px;color:#aab7cf;line-height:1.5}
+  .feat .n{color:var(--acc2)}
+  .chunkviz{width:100%;height:60px;border-radius:6px;border:1px solid #243149;background:#0b0f17;display:block}
+  .kbd{font-family:var(--mono);background:#1b2436;border:1px solid #2a3850;border-radius:4px;padding:0 5px;font-size:10px}
+  footer{font-size:10.5px;color:var(--mut);padding:0 4px}
+  @media (max-width:1100px){.wrap{grid-template-columns:1fr}.right{max-height:50vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>IEEE Global Robot Championships Malta 2026 · <span>Robot Arm AI Challenge</span> — live simulator</h1>
+  <div class="sub">Rulebook V0.6 (draft) · dual SO‑101‑style arms · LeRobot‑style observation / action view · scoring reproduced from §5.8</div>
+</header>
+
+<div class="wrap">
+  <div class="left">
+    <div class="toolbar">
+      <div class="grp">
+        <button id="play" class="on" title="Space">⏸ Pause</button>
+        <button id="estop" title="§5.7.2 emergency stop — halts all motion; run is void" style="background:#7f1d1d;border-color:#b91c1c;color:#fff;font-weight:700">⬤ E‑STOP</button>
+        <button id="reset">↺ Reset round</button>
+        <button id="auto" class="on warn" title="Automatically advance through all rounds">Autoplay</button>
+      </div>
+      <div class="grp">
+        <label>Game 1</label>
+        <button data-r="g1r1">R1 Colour</button><button data-r="g1r2">R2 Shape</button><button data-r="g1r3">R3 Dynamic</button>
+      </div>
+      <div class="grp">
+        <label>Game 2</label>
+        <button data-r="g2r1">Pouring</button><button data-r="g2r2">Folding</button><button data-r="g2r3">Wrap&amp;Pack</button>
+      </div>
+      <div class="grp">
+        <label>Final</label>
+        <button data-r="final">Tower Duel</button>
+      </div>
+      <div class="grp">
+        <label>Speed</label><input id="speed" type="range" min="0.25" max="8" step="0.25" value="2" style="width:90px"><span id="speedv" style="font-family:var(--mono);font-size:11px;width:34px">2.0×</span>
+      </div>
+      <div class="grp">
+        <button id="tgJudge" class="on">Judge perturbs</button>
+        <button id="tgChunk" class="on">Action chunks</button>
+        <button id="tgReach">Reach radii</button>
+        <button id="tgCam" class="on">Camera rigs</button>
+      </div>
+    </div>
+    <div class="stage"><canvas id="main"></canvas></div>
+    <footer>Top view of the 1700 × 1200 mm workspace (§5.1.3.7), arms 500 mm apart (§5.1.3.3), reach 500 mm (§5.1.6.7), source area marked with black tape (§5.8.1.26). Objects/cloths are drawn to nominal size; cloth layout is compacted so both arms can reach every item. Keys: <span class="kbd">Space</span> pause · <span class="kbd">1‑7</span> rounds · <span class="kbd">N</span> next round.</footer>
+  </div>
+
+  <div class="right">
+    <div class="card">
+      <h3>Live score <span class="tag" id="roundTag">—</span></h3>
+      <div class="score" id="scoreBox"></div>
+    </div>
+
+    <div class="card">
+      <h3>Policy (LeRobot) <span class="tag">lerobot.policies</span></h3>
+      <div class="policy" id="policyBox"></div>
+      <canvas class="chunkviz" id="chunkviz" style="margin-top:8px"></canvas>
+      <div class="feat" id="polMeta"></div>
+    </div>
+
+    <div class="card">
+      <h3>observation.images <span class="tag">30 fps</span></h3>
+      <div class="obs">
+        <div><canvas id="camTop" width="320" height="200"></canvas><div class="lab">observation.images.top · H‑rig (§5.1.7.5)</div></div>
+        <div><canvas id="camSide" width="320" height="200"></canvas><div class="lab">observation.images.side · 25 mm pole (§5.1.7.2)</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>observation.state / action <span class="tag">12 floats</span></h3>
+      <div class="joints" id="jointsBox"></div>
+    </div>
+
+    <div class="card">
+      <h3>Insight <span class="tag">why this round matters</span></h3>
+      <div class="insight" id="insightBox"></div>
+    </div>
+
+    <div class="card">
+      <h3>Episode log <span class="tag" id="dsTag">LeRobotDataset</span></h3>
+      <div class="log" id="logBox"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================================================================
+   IEEE Robot Arm AI Challenge 2026 simulator
+   All scoring tables below are transcribed from Rules & Regulations
+   V0.6 §5.8 (Game 1, Game 2, Final). Timings from §5.8.2.
+   =================================================================== */
+'use strict';
+
+// ---------- geometry (mm) ----------
+const WS = {w:1700, h:1200};
+const ARM_SEP = 500;
+const BASE_Y = 1100;
+const LINKS = {h0:60, L1:160, L2:170, L3:150};   // stylised SO‑101: base height, shoulder link, forearm, wrist+gripper
+const REACH_MAX = 500, REACH_MIN = 150;
+
+const C = {
+  red:'#f05252', blue:'#3b82f6', green:'#34c26b', yellow:'#f2c53d', pink:'#ec6fb2',
+  lightblue:'#7fc4ff', lightgreen:'#8fe3a4', lightyellow:'#f7e58f', lightpink:'#f6a8d2',
+  tape:'#0a0a0a', table:'#e8e6e0', tableLine:'#cfcbc2', armL:'#4fd1c5', armR:'#f6ad55',
+  armA1:'#4fd1c5', armA2:'#38a89d', armB1:'#f6ad55', armB2:'#d98a2c'
+};
+
+// ---------- utilities ----------
+const rnd = (a,b)=>a+Math.random()*(b-a);
+const gauss = (s=1)=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*s;};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const dist2=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const dist3=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
+const pick=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+const fmt=(s)=>{s=Math.max(0,s);const m=Math.floor(s/60),ss=Math.floor(s%60);return `${m}:${ss.toString().padStart(2,'0')}`;};
+
+// ---------- policies ----------
+const POLICIES = {
+  act:  {name:'ACT', chunk:100, latency:0.035, acc:0.90, jitter:1.0, lang:false,
+         meta:'Action Chunking Transformer · chunk=100 · temporal ensembling · L1 + KL(β=10) · ~84 M params',
+         note:'Open‑loop chunks: great for repeatable pick‑and‑place, weak when bins move mid‑chunk (R3).'},
+  diff: {name:'Diffusion', chunk:16, latency:0.080, acc:0.93, jitter:0.6, lang:false,
+         meta:'Diffusion Policy · horizon=16 · n_action_steps=8 · DDIM 10 steps · UNet1D',
+         note:'Multimodal action distributions handle cloth/rice well; inference cost is the price.'},
+  vla:  {name:'SmolVLA', chunk:50, latency:0.120, acc:0.88, jitter:0.8, lang:true,
+         meta:'SmolVLA · VLM backbone (SmolVLM‑2) · flow‑matching action expert · language‑conditioned',
+         note:'Only policy that can ground "prioritize height" (§5.8.4.26). Slower, needs good prompts.'}
+};
+let policy = POLICIES.act;
+
+// ---------- simulation core ----------
+const sim = {t:0, speed:2, playing:true, auto:true, round:null, runners:[], flags:{judge:true,chunk:true,reach:false,cam:true},
+             frames:0, episodes:0, successes:0, attempts:0, log:[], fps:30, acc:0, inferenceMs:0};
+
+function log(msg, cls='') {
+  sim.log.push({t:sim.t, msg, cls});
+  if (sim.log.length>160) sim.log.shift();
+  const el=document.getElementById('logBox');
+  el.innerHTML = sim.log.slice(-60).map(l=>`<div class="${l.cls}"><span style="color:#5a6b88">${fmt(l.t)}</span> ${l.msg}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---------- arm ----------
+class Arm {
+  constructor(id, bx, by, color, team=null) {
+    this.id=id; this.bx=bx; this.by=by; this.color=color; this.team=team;
+    this.cur={x:bx, y:by-220, z:160}; this.tgt={...this.cur};
+    this.grip=1; this.gripT=1; this.held=null; this.speed=650; this.roll=0;
+    this.trail=[]; this.done=false; this.busy=false; this.replan=0; this.label='';
+  }
+  ik(p){
+    const dx=p.x-this.bx, dy=p.y-this.by; let r=Math.hypot(dx,dy); if(r<1e-3) r=1e-3;
+    const pan=Math.atan2(dx,-dy);  // 0 = pointing into the table (−y)
+    const ux=dx/r, uy=dy/r;
+    const rw=r, zw=p.z+LINKS.L3-LINKS.h0;
+    let D=Math.hypot(rw,zw); const Lsum=LINKS.L1+LINKS.L2-0.5; const k = D>Lsum ? Lsum/D : 1; D*=k;
+    const a=Math.atan2(zw,rw);
+    const cosA=clamp((LINKS.L1*LINKS.L1+D*D-LINKS.L2*LINKS.L2)/(2*LINKS.L1*D),-1,1);
+    const th1=a+Math.acos(cosA);
+    const cosE=clamp((LINKS.L1*LINKS.L1+LINKS.L2*LINKS.L2-D*D)/(2*LINKS.L1*LINKS.L2),-1,1);
+    const elbowInterior=Math.acos(cosE);
+    const er=LINKS.L1*Math.cos(th1), ez=LINKS.h0+LINKS.L1*Math.sin(th1);
+    const wr=rw*k, wz=LINKS.h0+zw*k;
+    return {
+      pan, sh:th1, el:Math.PI-elbowInterior, wr:-(th1+(Math.PI-elbowInterior)) , roll:this.roll,
+      r, base:{x:this.bx,y:this.by,z:0}, top:{x:this.bx,y:this.by,z:LINKS.h0},
+      elbow:{x:this.bx+ux*er, y:this.by+uy*er, z:ez},
+      wrist:{x:this.bx+ux*wr, y:this.by+uy*wr, z:wz},
+      tip:{x:this.bx+ux*wr, y:this.by+uy*wr, z:Math.max(2, wz-LINKS.L3)},
+      plane:{er,ez,wr,wz, tz:Math.max(2,wz-LINKS.L3)}
+    };
+  }
+  update(dt){
+    if(sim.estop) return;                       // §5.7.2 emergency stop: all motion halts
+    const d=dist3(this.cur,this.tgt);
+    // collision avoidance: the lower-priority arm (later in world.arms, same team) slows to a crawl when
+    // its tip is within 120 mm (horizontal) of a higher-priority arm's tip. Real SO-101 pairs need this too.
+    let slow=1; const me=world.arms.indexOf(this);
+    for(let i=0;i<me;i++){ const o=world.arms[i]; if(o.team!==this.team) continue; if(dist2(o.cur,this.cur)<120 && dist2(o.cur,this.tgt)<160){ slow=0.12; this.yielding=true; } }
+    if(slow===1) this.yielding=false;
+    if(d>0.01){
+      const step=Math.min(d, this.speed*slow*dt*(0.35+0.65*Math.min(1,d/120)));
+      const f=step/d;
+      this.cur.x+=(this.tgt.x-this.cur.x)*f; this.cur.y+=(this.tgt.y-this.cur.y)*f; this.cur.z+=(this.tgt.z-this.cur.z)*f;
+      // policy jitter: tiny tremor scaled by inverse accuracy
+      const j=(1-policy.acc)*policy.jitter*6*dt;
+      this.cur.x+=gauss(j); this.cur.y+=gauss(j);
+    }
+    const gd=this.gripT-this.grip; this.grip+=clamp(gd, -dt*3.5, dt*3.5);
+    if(this.held){ this.held.x=this.cur.x; this.held.y=this.cur.y; this.held.z=this.cur.z; }
+    if(sim.frames%2===0){ this.trail.push({x:this.cur.x,y:this.cur.y,z:this.cur.z}); if(this.trail.length>50) this.trail.shift(); }
+    if(this.replan>0) this.replan-=dt;
+  }
+  joints(){ const k=this.ik(this.cur); return [k.pan, k.sh, k.el, k.wr, this.roll, this.grip]; }
+}
+
+// ---------- coroutine helpers ----------
+function* moveTo(arm,x,y,z,tol=4){ arm.tgt={x,y,z}; while(dist3(arm.cur,arm.tgt)>tol) yield; }
+function* track(arm,getter,z,tol=4){ // follows a moving target (live perception)
+  while(true){ const p=getter(); arm.tgt={x:p.x,y:p.y,z}; if(dist3(arm.cur,arm.tgt)<=tol) return; yield; } }
+function* grip(arm,v){ arm.gripT=v; while(Math.abs(arm.grip-v)>0.03) yield; }
+function* wait(sec){ const t0=sim.t; while(sim.t-t0<sec) yield; }
+function* infer(arm){ arm.busy=true; sim.inferenceMs=policy.latency*1000*(0.8+Math.random()*0.5); yield* wait(sim.inferenceMs/1000); arm.busy=false; }
+function* pickObj(arm,obj){
+  yield* moveTo(arm,obj.x,obj.y,obj.h+70);
+  yield* moveTo(arm,obj.x,obj.y,obj.h*0.55+2,3);
+  yield* grip(arm,0.15); arm.held=obj; obj.held=arm; obj.z=arm.cur.z;
+  yield* moveTo(arm,obj.x,obj.y,obj.h+120);
+}
+function* placeAt(arm,x,y,zRelease){
+  yield* moveTo(arm,x,y,170); yield* moveTo(arm,x,y,zRelease,3);
+  const o=arm.held; arm.held=null; if(o){o.held=null; o.z=0;}
+  yield* grip(arm,1); yield* moveTo(arm,x,y,170);
+}
+function runAll(){ for(const r of sim.runners){ if(!r.done){ const s=r.gen.next(); if(s.done) r.done=true; } } sim.runners=sim.runners.filter(r=>!r.done); }
+function spawn(gen){ sim.runners.push({gen,done:false}); }
+
+// ---------- world ----------
+const world = { arms:[], objects:[], bins:[], cloths:[], grains:[], blocks:[], proj:[], tape:null, zone:null, cup:null, bowl:null, sheet:null, box:null, mascot:null, towers:null, duel:null, notes:[] };
+
+function resetWorld(){
+  world.arms=[]; world.objects=[]; world.bins=[]; world.cloths=[]; world.grains=[]; world.blocks=[]; world.proj=[]; world.notes=[];
+  world.tape=null; world.zone=null; world.cup=null; world.bowl=null; world.sheet=null; world.box=null; world.mascot=null; world.towers=null; world.duel=null;
+  sim.t=0;
+}
+function twoArms(){
+  const cx=WS.w/2;
+  world.arms=[ new Arm('L', cx-ARM_SEP/2, BASE_Y, C.armL), new Arm('R', cx+ARM_SEP/2, BASE_Y, C.armR) ];
+}
+
+// ---------- Game 1 objects ----------
+const SHAPES=['cube','cylinder','dodecahedron','hexprism'];
+const COLORS=['red','blue','green','yellow'];
+const SHAPE_BIN={cube:'red',cylinder:'blue',dodecahedron:'green',hexprism:'yellow'};         // §5.8.1.45
+const PTS={small:{cube:1,cylinder:2,dodecahedron:3,hexprism:5}, large:{cube:2,cylinder:3,dodecahedron:4,hexprism:5}}; // §5.8.1.63
+const SIZE={small:36,large:52};
+
+function makeObjects(dense){
+  const objs=[]; let i=0;
+  for(const size of ['small','large']) for(const col of COLORS) for(const sh of SHAPES){
+    objs.push({id:i++, shape:sh, color:col, size, d:SIZE[size], h:SIZE[size], x:0,y:0,z:0, held:null, claimed:null, scored:null, rot:rnd(0,Math.PI)});
+  }
+  // source area (black tape) in front of arms
+  world.tape={x:430,y:905,w:840,h:170};
+  const cols=dense?12:16, rows=dense?3:2;
+  const sx=world.tape.x+40, sy=world.tape.y+40, dx=(world.tape.w-80)/(cols-1), dy=(world.tape.h-80)/Math.max(1,rows-1);
+  const slots=[]; for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) slots.push({x:sx+c*dx,y:sy+r*dy});
+  slots.sort(()=>Math.random()-0.5);
+  objs.forEach((o,k)=>{ const s=slots[k%slots.length]; o.x=s.x+gauss(dense?10:4); o.y=s.y+gauss(dense?10:4); });
+  return objs;
+}
+const BIN_SPOTS=[{x:800,y:720},{x:900,y:720},{x:760,y:830},{x:940,y:830}];
+const BIN_ALT=[{x:850,y:700},{x:720,y:800},{x:980,y:800},{x:850,y:830},{x:780,y:760},{x:920,y:760}];
+function makeBins(){
+  const spots=[...BIN_SPOTS].sort(()=>Math.random()-0.5);
+  world.bins=COLORS.map((c,i)=>({color:c, x:spots[i].x, y:spots[i].y, w:95, h:95, items:[], shake:0, lock:null}));
+}
+
+// ---------- Game 1 director ----------
+function* game1(round){
+  const rules={1:{name:'Game 1 · R1 Colour Sort', limit:300, rule:(o)=>o.color},
+               2:{name:'Game 1 · R2 Shape Sort',  limit:300, rule:(o)=>SHAPE_BIN[o.shape]},
+               3:{name:'Game 1 · R3 Dynamic Sort',limit:360, rule:(o)=>SHAPE_BIN[o.shape]}}[round];
+  resetWorld(); twoArms();
+  world.objects=makeObjects(round>1); makeBins();
+  const R=sim.round={key:'g1r'+round, name:rules.name, limit:rules.limit, t0:0, score:{correct:0,wrong:0,bonus:0,final:null}, placed:0, total:32, finished:false, game:1, round};
+  log(`<span class="sys">▶ ${rules.name}</span> · 32 objects in source area · bins placed by judge (§5.5.5)`, 'sys');
+  log(`policy=${policy.name} · chunk=${policy.chunk} · ${policy.lang?'language‑conditioned':'vision‑only'}`, 'sys');
+
+  function freeObjects(){ return world.objects.filter(o=>!o.held&&!o.claimed&&!o.scored); }
+  function* armLoop(arm, side){
+    while(true){
+      let cands=freeObjects().filter(o=>Math.hypot(o.x-arm.bx,o.y-arm.by)<REACH_MAX-20);
+      if(!cands.length){ arm.done=true; return; }
+      let own=cands.filter(o=> side<0 ? o.x<WS.w/2 : o.x>=WS.w/2);
+      if(own.length) cands=own;
+      cands.sort((a,b)=>dist2(a,arm.cur)-dist2(b,arm.cur));
+      const obj=cands[0]; obj.claimed=arm;
+      yield* infer(arm);
+      yield* pickObj(arm,obj);
+      sim.attempts++;
+      const want=rules.rule(obj);
+      let targetColor=want;
+      const slip=Math.random()>policy.acc*(round===3&&!policy.lang?0.97:1);
+      if(slip){ targetColor=pick(COLORS.filter(c=>c!==want)); }
+      const bin=()=>world.bins.find(b=>b.color===targetColor);
+      // bin lock: only one arm may be over a bin at a time (avoids two grippers colliding above the same bin)
+      while(bin().lock && bin().lock!==arm){ arm.tgt={x:arm.cur.x,y:arm.cur.y,z:200}; yield; }
+      bin().lock=arm;
+      // live tracking of the bin (R3: judge may move it)
+      const b0={x:bin().x,y:bin().y};
+      yield* track(arm, ()=>({x:bin().x,y:bin().y}), 190, 6);
+      if(dist2(b0,bin())>5){ arm.replan=1.2; log(`${arm.id}: bin moved ${Math.round(dist2(b0,bin()))} mm mid‑chunk → re‑plan from live frame`, 'ev'); }
+      yield* track(arm, ()=>({x:bin().x,y:bin().y}), 120, 4);
+      const o=arm.held; arm.held=null; o.held=null; o.scored=bin().color; o.z=0; o.x=bin().x+gauss(14); o.y=bin().y+gauss(14); bin().items.push(o); bin().shake=0.5;
+      yield* grip(arm,1);
+      const pts=PTS[o.size][o.shape];
+      if(o.scored===want){ R.score.correct+=pts; sim.successes++; log(`${arm.id}: ${o.size} ${o.color} ${o.shape} → BIN‑${o.scored.toUpperCase()} <span class="ok">✓ +${pts}</span>`, ''); }
+      else { R.score.wrong+=pts; log(`${arm.id}: ${o.size} ${o.color} ${o.shape} → BIN‑${o.scored.toUpperCase()} <span class="bad">✗ −${pts} (wrong bin §5.8.1.57)</span>`, ''); }
+      R.placed++; sim.episodes++;
+      yield* moveTo(arm, bin().x, bin().y, 190);
+      bin().lock=null;
+    }
+  }
+  spawn(armLoop(world.arms[0],-1)); spawn(armLoop(world.arms[1],+1));
+  if(round===3) spawn(judgeDynamic());
+  // wait for completion or time limit
+  while(true){
+    const t=sim.t;
+    if(world.arms.every(a=>a.done)) { R.score.bonus = t<R.limit ? 10 : 0; log(`all objects placed at ${fmt(t)} ${R.score.bonus?'<span class="ok">+10 completion bonus (§5.8.1.62)</span>':''}`, 'sys'); break; }
+    if(t>=R.limit){ log('time limit reached (§5.8.1.43)', 'ev'); break; }
+    yield;
+  }
+  R.score.final=clamp(R.score.correct-R.score.wrong+R.score.bonus,0,100);
+  R.finished=true; results['g1r'+round]=R.score.final;
+  log(`<span class="sys">■ Round score = max(0, ${R.score.correct} − ${R.score.wrong} + ${R.score.bonus}) = <b>${R.score.final}</b></span>`, 'sys');
+  if(results.g1r1!=null&&results.g1r2!=null&&results.g1r3!=null) log(`<span class="sys">Game 1 = (R1+R2+R3)/3 = <b>${((results.g1r1+results.g1r2+results.g1r3)/3).toFixed(1)}</b> (§5.8.1.68)</span>`,'sys');
+  yield* wait(3); if(sim.auto) nextRound();
+}
+function* judgeDynamic(){
+  while(!sim.round.finished){
+    yield* wait(rnd(6,11));
+    if(!sim.flags.judge) continue;
+    const b=pick(world.bins); const spot=pick(BIN_ALT.filter(s=>!world.bins.some(o=>dist2(o,s)<110)));
+    if(spot){ b.x=spot.x; b.y=spot.y; b.shake=0.8; world.notes.push({x:b.x,y:b.y-70,txt:'JUDGE MOVED BIN',t:sim.t}); log(`<span class="ev">⚑ judge relocates BIN‑${b.color.toUpperCase()} (§5.8.1.51)</span>`,'ev'); }
+    if(Math.random()<0.5){ const o=pick(world.objects.filter(o=>!o.held&&!o.scored&&!o.claimed)); if(o){ o.x=clamp(o.x+gauss(60),world.tape.x+30,world.tape.x+world.tape.w-30); o.y=clamp(o.y+gauss(30),world.tape.y+30,world.tape.y+world.tape.h-30); world.notes.push({x:o.x,y:o.y-50,txt:'object nudged',t:sim.t}); log(`<span class="ev">⚑ judge nudges an object (§5.8.1.52)</span>`,'ev'); } }
+  }
+}
+
+// ---------- Game 2 · R1 Pouring ----------
+function* game2Pouring(){
+  resetWorld(); twoArms();
+  const R=sim.round={key:'g2r1', name:'Game 2 · R1 Pouring', limit:300, game:2, round:1, finished:false,
+    score:{inBowl:0, spilled:0, twoArm:true, time:null, pen:0, final:null}};
+  world.cup={x:720,y:930,z:0,h:150,d:60,g:125,tilt:0,held:null};
+  world.bowl={x:980,y:930,z:0,h:80,d:140,held:null,over:false};
+  log('<span class="sys">▶ Game 2 · R1 Pouring</span> · cup 60 mm / 125 g rice · bowl 140 mm (§5.8.1.86‑87)','sys');
+  const L=world.arms[0], Rr=world.arms[1];
+  const t0=sim.t; let done=false;
+  spawn((function*(){ // right arm: bowl
+    yield* infer(Rr); yield* moveTo(Rr,world.bowl.x,world.bowl.y,200); yield* moveTo(Rr,world.bowl.x+60,world.bowl.y,70,3); yield* grip(Rr,0.2); Rr.held=world.bowl; world.bowl.held=Rr;
+    yield* moveTo(Rr,900,860,60); // bring bowl to centre (held object follows gripper), slightly lifted
+    while(!done) yield;
+    yield* moveTo(Rr,980+60,930,60,3); Rr.held=null; world.bowl.held=null; world.bowl.x=980; world.bowl.y=930; world.bowl.z=0; yield* grip(Rr,1); yield* moveTo(Rr,980,930,200);
+  })());
+  spawn((function*(){ // left arm: cup
+    yield* infer(L); yield* moveTo(L,world.cup.x,world.cup.y,220); yield* moveTo(L,world.cup.x,world.cup.y,95,3); yield* grip(L,0.25); L.held=world.cup; world.cup.held=L;
+    yield* moveTo(L,world.cup.x,world.cup.y,250);
+    // approach above bowl with policy‑dependent alignment error
+    const err=gauss((1-policy.acc)*55*policy.jitter);
+    const ex=900-42+err, ey=860+gauss((1-policy.acc)*30);
+    yield* moveTo(L,ex,ey,235,3);
+    yield* wait(0.3);
+    // tilt and pour
+    const T=3.2; const ts=sim.t; let poured=0; const total=250;
+    while(sim.t-ts<T+0.6){
+      const p=clamp((sim.t-ts)/T,0,1); world.cup.tilt=Math.sin(p*Math.PI)*1.4; L.roll=world.cup.tilt;
+      const want=Math.floor(Math.min(1,(sim.t-ts)/T)*total);
+      while(poured<want){ poured++; const lip={x:L.cur.x+45*Math.sin(world.cup.tilt)*1.1, y:L.cur.y, z:L.cur.z+world.cup.h*0.4};
+        world.grains.push({x:lip.x+gauss(3),y:lip.y+gauss(3),z:lip.z,vx:gauss(22)+8*world.cup.tilt,vy:gauss(22),vz:-rnd(50,150),st:0}); }
+      yield;
+    }
+    world.cup.tilt=0; L.roll=0;
+    yield* moveTo(L,720,930,250); yield* moveTo(L,720,930,95,3); L.held=null; world.cup.held=null; world.cup.x=720; world.cup.y=930; world.cup.z=0; yield* grip(L,1); yield* moveTo(L,720,930,220);
+    done=true;
+  })());
+  while(!done || world.grains.some(g=>g.st===0)) { if(sim.t-t0>R.limit){log('time limit','ev');break;} yield; }
+  yield* wait(0.8);
+  const inBowl=world.grains.filter(g=>g.st===1).length*0.5, spilled=world.grains.filter(g=>g.st===2).length*0.5;
+  R.score.inBowl=inBowl; R.score.spilled=spilled; R.score.time=sim.t-t0;
+  const A= inBowl>=120?60: inBowl>=100?45: inBowl>=80?30: inBowl>=50?15:0;
+  const B= spilled<=10?20: spilled<=25?15: spilled<=40?10: spilled<=60?5:0;
+  const Cc=10; const tt=R.score.time; const D= tt<=45?10: tt<=60?8: tt<=75?6: tt<=90?4: tt<=120?2:0;
+  const pen=world.bowl.over?10:0;
+  R.score.final=Math.max(0,A+B+Cc+D-pen); R.score.parts={A,B,C:Cc,D,pen}; R.finished=true; results.g2r1=R.score.final;
+  log(`<span class="sys">■ Pouring: ${inBowl.toFixed(0)} g in bowl (A=${A}) · ${spilled.toFixed(0)} g spilled (B=${B}) · two‑arm C=10 · time ${fmt(tt)} (D=${D}) → <b>${R.score.final}</b>/100</span>`,'sys');
+  sim.episodes++; sim.attempts++; if(R.score.final>=60) sim.successes++;
+  yield* wait(3); if(sim.auto) nextRound();
+}
+
+// ---------- Game 2 · R2 Folding ----------
+function* game2Folding(){
+  resetWorld(); twoArms();
+  const R=sim.round={key:'g2r2', name:'Game 2 · R2 Folding', limit:300, game:2, round:2, finished:false, score:{folds:0,align:[],zone:0,twoArm:true,time:null,pen:0,final:null}};
+  world.zone={x:745,y:690,w:210,h:130};
+  const cols=['lightblue','lightgreen','lightyellow','lightpink'];
+  const spots=[{x:760,y:890},{x:940,y:890},{x:760,y:1040},{x:940,y:1040}];
+  world.cloths=cols.map((c,i)=>({color:c, x:spots[i].x, y:spots[i].y, w:180, h:180, stage:0, prog:0, z:0, placed:false, misalign:0, held:false}));
+  log('<span class="sys">▶ Game 2 · R2 Folding</span> · 4 cloths (§5.8.1.104) · two‑stage fold → ~150×150 mm (§5.8.1.110)','sys');
+  const [L,Rr]=world.arms; const t0=sim.t;
+  spawn((function*(){
+    for(const cl of world.cloths){
+      // stage 1: both arms grasp the far corners, drag them over
+      yield* infer(L);
+      const hw=cl.w/2, hh=cl.h/2;
+      yield* par([moveTo(L,cl.x-hw,cl.y-hh,120), moveTo(Rr,cl.x+hw,cl.y-hh,120)]);
+      yield* par([moveTo(L,cl.x-hw,cl.y-hh,8,3), moveTo(Rr,cl.x+hw,cl.y-hh,8,3)]);
+      yield* par([grip(L,0.1),grip(Rr,0.1)]);
+      cl.held=true; const e1=gauss((1-policy.acc)*40*policy.jitter);
+      yield* foldDrag(cl,L,Rr,{x1:cl.x-hw,y1:cl.y-hh,x2:cl.x+hw,y2:cl.y-hh},{x1:cl.x-hw+e1,y1:cl.y+hh,x2:cl.x+hw+e1,y2:cl.y+hh},1);
+      cl.stage=1; cl.misalign+=Math.abs(e1);
+      yield* par([grip(L,1),grip(Rr,1)]);
+      yield* par([moveTo(L,L.cur.x,L.cur.y,120), moveTo(Rr,Rr.cur.x,Rr.cur.y,120)]);
+      // stage 2: fold along the longer axis
+      const cx=cl.x, cy=cl.y+hh/2; // folded rect now spans y in [cl.y, cl.y+hh]
+      yield* par([moveTo(L,cx-hw,cy-hh/2,120), moveTo(Rr,cx-hw,cy+hh/2,120)]);
+      yield* par([moveTo(L,cx-hw,cy-hh/2,8,3), moveTo(Rr,cx-hw,cy+hh/2,8,3)]);
+      yield* par([grip(L,0.1),grip(Rr,0.1)]);
+      const e2=gauss((1-policy.acc)*35*policy.jitter);
+      yield* foldDrag(cl,L,Rr,{x1:cx-hw,y1:cy-hh/2,x2:cx-hw,y2:cy+hh/2},{x1:cx+e2,y1:cy-hh/2,x2:cx+e2,y2:cy+hh/2},2);
+      cl.stage=2; cl.misalign+=Math.abs(e2); cl.w=hw; cl.h=hh; cl.x=cx+hw/2; cl.y=cy;
+      yield* par([grip(L,1),grip(Rr,1)]);
+      // carry folded cloth with both arms to target zone
+      const n=world.cloths.filter(c=>c.placed).length; const tx=world.zone.x+55+(n%2)*100, ty=world.zone.y+65; const tz=(Math.floor(n/2))*12;
+      yield* par([moveTo(L,cl.x-30,cl.y,80), moveTo(Rr,cl.x+30,cl.y,80)]);
+      yield* par([moveTo(L,cl.x-30,cl.y,10,3), moveTo(Rr,cl.x+30,cl.y,10,3)]);
+      yield* par([grip(L,0.1),grip(Rr,0.1)]);
+      const carry=(function*(){ while(true){ cl.x=(L.cur.x+Rr.cur.x)/2; cl.y=(L.cur.y+Rr.cur.y)/2; cl.z=(L.cur.z+Rr.cur.z)/2-8; yield; } })();
+      spawn(carry);
+      yield* par([moveTo(L,tx-30,ty,90), moveTo(Rr,tx+30,ty,90)]);
+      yield* par([moveTo(L,tx-30,ty,tz+10,3), moveTo(Rr,tx+30,ty,tz+10,3)]);
+      sim.runners=sim.runners.filter(r=>r.gen!==carry); cl.z=tz; cl.x=tx; cl.y=ty; cl.placed=true; cl.held=false;
+      yield* par([grip(L,1),grip(Rr,1)]);
+      yield* par([moveTo(L,tx-30,ty,120), moveTo(Rr,tx+30,ty,120)]);
+      const al=cl.misalign; const ap= al<=20?5: al<=35?3: al<=50?1:0; R.score.align.push(ap);
+      log(`cloth ${cl.color.replace('light','')}: 2 folds <span class="ok">+15</span> · misalign ${al.toFixed(0)} mm → align +${ap} · in zone +5`,'');
+      sim.episodes++; sim.attempts++; sim.successes++;
+      if(sim.t-t0>R.limit) break;
+    }
+    R.score.time=sim.t-t0;
+  })());
+  while(!(world.cloths.every(c=>c.placed)||sim.t-t0>R.limit)) yield;
+  // validation period 5 s (§5.8.1.122)
+  world.notes.push({x:world.zone.x+105,y:world.zone.y-30,txt:'VALIDATION 5 s',t:sim.t,life:5});
+  yield* wait(5);
+  const nf=world.cloths.filter(c=>c.stage===2).length;
+  // §5.8.1.119 caps: A ≤60, B ≤15, C ≤15 (rulebook lists 4 cloths but caps assume 3 → clamp, total ≤100)
+  const A=Math.min(60,nf*15), B=Math.min(15,R.score.align.reduce((a,b)=>a+b,0)), Cc=Math.min(15,world.cloths.filter(c=>c.placed).length*5), D=5;
+  const tt=R.score.time??(sim.t-t0); const E= tt<=90?5: tt<=120?4: tt<=150?3: tt<=180?2:0;
+  R.score.final=clamp(A+B+Cc+D+E,0,100); R.score.parts={A,B,C:Cc,D,E}; R.finished=true; results.g2r2=R.score.final;
+  log(`<span class="sys">■ Folding: folds ${A} · alignment ${B} · zone ${Cc} · two‑arm ${D} · time ${fmt(tt)} (+${E}) → <b>${R.score.final}</b>/100</span>`,'sys');
+  yield* wait(3); if(sim.auto) nextRound();
+}
+function* par(gens){ const rs=gens.map(g=>({g,done:false})); while(rs.some(r=>!r.done)){ for(const r of rs){ if(!r.done&&r.g.next().done) r.done=true; } yield; } }
+function* foldDrag(cl,L,Rr,from,to,stage){
+  const T=1.6; const ts=sim.t;
+  while(sim.t-ts<T){ const p=clamp((sim.t-ts)/T,0,1), e=p<.5?2*p*p:-1+(4-2*p)*p;
+    const lift=Math.sin(p*Math.PI)*60;
+    L.tgt={x:from.x1+(to.x1-from.x1)*e, y:from.y1+(to.y1-from.y1)*e, z:8+lift}; L.cur={...L.tgt};
+    Rr.tgt={x:from.x2+(to.x2-from.x2)*e, y:from.y2+(to.y2-from.y2)*e, z:8+lift}; Rr.cur={...Rr.tgt};
+    cl.prog=e; cl.foldStage=stage; yield; }
+  cl.prog=0;
+}
+
+// ---------- Game 2 · R3 Wrap & Pack ----------
+function* game2Wrap(){
+  resetWorld(); twoArms();
+  const R=sim.round={key:'g2r3', name:'Game 2 · R3 Wrap and Pack', limit:240, game:2, round:3, finished:false, score:{cover:0,inBox:0,closed:0,twoArm:true,time:null,pen:0,final:null}};
+  world.sheet={x:850,y:930,s:400,wrap:0}; world.mascot={x:690,y:900,z:0,h:150,d:70,wrapped:false,inBox:0,held:null};
+  world.box={x:1010,y:900,l:229,w:152,h:152,flaps:0,open:true};
+  log('<span class="sys">▶ Game 2 · R3 Wrap and Pack</span> · 3‑e mascot 150 mm · bubble wrap 400×400 · box 229×152×152 (§5.8.1.125‑127)','sys');
+  const [L,Rr]=world.arms; const t0=sim.t; let fin=false;
+  spawn((function*(){
+    // 1) right arm places mascot on sheet centre
+    yield* infer(Rr); yield* pickObj(Rr,world.mascot); yield* placeAt(Rr,world.sheet.x,world.sheet.y,world.mascot.h*0.55+2); world.mascot.x=world.sheet.x; world.mascot.y=world.sheet.y;
+    log('R: mascot placed on wrapping sheet','');
+    // 2) both arms grasp opposite corners, fold them over (two‑arm)
+    const s=world.sheet.s/2;
+    yield* par([moveTo(L,world.sheet.x-s,world.sheet.y+s,80), moveTo(Rr,world.sheet.x+s,world.sheet.y-s,80)]);
+    yield* par([moveTo(L,world.sheet.x-s,world.sheet.y+s,6,3), moveTo(Rr,world.sheet.x+s,world.sheet.y-s,6,3)]);
+    yield* par([grip(L,0.1),grip(Rr,0.1)]);
+    const T=2.4, ts=sim.t; const cov=clamp(0.78+gauss((1-policy.acc)*0.9),0.25,0.98);
+    while(sim.t-ts<T){ const p=clamp((sim.t-ts)/T,0,1); world.sheet.wrap=p*cov; const lift=Math.sin(p*Math.PI)*170;
+      L.cur={x:world.sheet.x-s+(s+20)*p, y:world.sheet.y+s-(s+20)*p, z:6+lift}; Rr.cur={x:world.sheet.x+s-(s+20)*p, y:world.sheet.y-s+(s+20)*p, z:6+lift}; L.tgt={...L.cur}; Rr.tgt={...Rr.cur}; yield; }
+    world.mascot.wrapped=true; R.score.cover=cov;
+    yield* par([grip(L,1),grip(Rr,1)]);
+    log(`wrap coverage ≈ ${(cov*100).toFixed(0)}% (${cov>=0.7?'<span class="ok">≥70% → 30 pts</span>':cov>=0.5?'50‑69% → 20':cov>=0.3?'30‑49% → 10':'<span class="bad">&lt;30% → 0</span>'})`,'');
+    // 3) both arms lift wrapped object into box
+    yield* par([moveTo(L,world.mascot.x-45,world.mascot.y,200), moveTo(Rr,world.mascot.x+45,world.mascot.y,200)]);
+    yield* par([moveTo(L,world.mascot.x-45,world.mascot.y,70,3), moveTo(Rr,world.mascot.x+45,world.mascot.y,70,3)]);
+    yield* par([grip(L,0.15),grip(Rr,0.15)]);
+    const carry=(function*(){ while(true){ world.mascot.x=(L.cur.x+Rr.cur.x)/2; world.mascot.y=(L.cur.y+Rr.cur.y)/2; world.mascot.z=(L.cur.z+Rr.cur.z)/2-70; world.sheet.x=world.mascot.x; world.sheet.y=world.mascot.y; yield; } })(); spawn(carry);
+    yield* par([moveTo(L,world.mascot.x-45,world.mascot.y,260), moveTo(Rr,world.mascot.x+45,world.mascot.y,260)]);
+    yield* par([moveTo(L,world.box.x-45,world.box.y,260), moveTo(Rr,world.box.x+45,world.box.y,260)]);
+    const drop=Math.random()<(1-policy.acc)*0.5;
+    if(drop){ world.mascot.inBox=0.5; log('<span class="bad">object slipped: only partially inside (10 pts)</span>',''); }
+    else world.mascot.inBox=1;
+    yield* par([moveTo(L,world.box.x-45,world.box.y,150,3), moveTo(Rr,world.box.x+45,world.box.y,150,3)]);
+    sim.runners=sim.runners.filter(r=>r.gen!==carry); world.mascot.x=world.box.x; world.mascot.y=world.box.y; world.mascot.z=drop?60:0; world.sheet.x=world.box.x; world.sheet.y=world.box.y;
+    yield* par([grip(L,1),grip(Rr,1)]);
+    yield* par([moveTo(L,world.box.x-45,world.box.y,260), moveTo(Rr,world.box.x+45,world.box.y,260)]);
+    // 4) close flaps: left arm the long flaps, right arm the short flaps
+    yield* par([moveTo(L,world.box.x,world.box.y-world.box.w/2-60,200), moveTo(Rr,world.box.x+world.box.l/2+60,world.box.y,200)]);
+    const T2=2.0, t2=sim.t; const closeTo=drop?0.55:(Math.random()<(1-policy.acc)?0.65:1);
+    while(sim.t-t2<T2){ const p=clamp((sim.t-t2)/T2,0,1); world.box.flaps=p*closeTo;
+      L.cur={x:world.box.x, y:world.box.y-world.box.w/2-60+60*p, z:200-40*p}; Rr.cur={x:world.box.x+world.box.l/2+60-60*p, y:world.box.y, z:200-40*p}; L.tgt={...L.cur}; Rr.tgt={...Rr.cur}; yield; }
+    R.score.closed=closeTo; R.score.time=sim.t-t0;
+    yield* par([moveTo(L,world.box.x-100,world.box.y-150,220), moveTo(Rr,world.box.x+100,world.box.y-150,220)]);
+    fin=true;
+  })());
+  while(!fin){ if(sim.t-t0>R.limit){log('time limit','ev');break;} yield; }
+  world.notes.push({x:world.box.x,y:world.box.y-130,txt:'VALIDATION 5 s',t:sim.t,life:5}); yield* wait(5);
+  const cov=R.score.cover; const A= cov>=.7?30: cov>=.5?20: cov>=.3?10:0;
+  const B= world.mascot.inBox>=1?20: world.mascot.inBox>0?10:0;
+  const cl=R.score.closed; const Cc= cl>=1?25: cl>=.6?15: cl>0?5:0;
+  const D=10, E=5; const tt=R.score.time??(sim.t-t0); const F= tt<=120?10: tt<=150?8: tt<=180?6: tt<=210?4: tt<=240?2:0;
+  R.score.final=Math.max(0,A+B+Cc+D+E+F); R.score.parts={A,B,C:Cc,D,E,F}; R.finished=true; results.g2r3=R.score.final;
+  log(`<span class="sys">■ Wrap&amp;Pack: wrap ${A} · in box ${B} · closure ${Cc} · two‑arm ${D} · stable ${E} · time ${fmt(tt)} (+${F}) → <b>${R.score.final}</b>/100</span>`,'sys');
+  sim.episodes++; sim.attempts++; if(R.score.final>=60) sim.successes++;
+  yield* wait(3); if(sim.auto) nextRound();
+}
+
+// ---------- Final · Tower Construction Duel ----------
+function* finalDuel(){
+  resetWorld();
+  const A1=new Arm('A1',300,BASE_Y,C.armA1,'A'), A2=new Arm('A2',600,BASE_Y,C.armA2,'A');
+  const B1=new Arm('B1',1100,BASE_Y,C.armB1,'B'), B2=new Arm('B2',1400,BASE_Y,C.armB2,'B');
+  world.arms=[A1,A2,B1,B2];
+  const R=sim.round={key:'final', name:'Final · Tower Construction Duel', limit:240, game:3, round:1, finished:false, score:{}};
+  const aggr = Math.random()<0.5 ? 'A' : 'B';
+  const mk=(team,cx)=>({team, zone:{x:cx-150,y:720,w:300,h:220}, cx, cy:830, blocks:[], stock:{blue:[],red:[]}, cmds:0, pen:0, lastCmd:'build', strategy: team===aggr?'aggressive':'balanced', misalign:0, collapses:0, thrown:0});
+  world.duel={A:mk('A',450), B:mk('B',1250), window:false, nextWhistle:30, t0:sim.t, over:false};
+  const T=world.duel;
+  for(const team of ['A','B']){ const Tm=T[team]; const sx=Tm.cx-120;
+    for(let i=0;i<10;i++) world.blocks.push({team,color:'blue',x:sx+i*27,y:1010,z:0,s:40,state:'stock',id:team+'b'+i});
+    for(let i=0;i<6;i++)  world.blocks.push({team,color:'red', x:sx+i*45,y:1060,z:0,s:40,state:'stock',id:team+'r'+i}); }
+  log('<span class="sys">▶ FINAL · Tower Construction Duel</span> · blue = build only, red = dual‑use (§5.8.4.14‑15) · throws only when own tower ≥ 6 (§5.8.4.27)','sys');
+  log(`Team ${T.A.strategy==='aggressive'?'A':'B'} strategy: <b>aggressive</b> (disrupt early) · Team ${T.A.strategy==='aggressive'?'B':'A'}: <b>balanced</b> (few commands) · operator commands only in 30 s whistle windows (§5.8.4.25)`,'sys');
+  const height=(Tm)=>Tm.blocks.length;
+  function* builder(arm, Tm){
+    const other=T[Tm.team==='A'?'B':'A'];
+    while(!T.over){
+      // decide: throw if commanded & allowed
+      const wantThrow = Tm.lastCmd==='throw' && Tm.stockRed().length && !Tm.threwThisWindow;
+      if(wantThrow){
+        const blk=Tm.stockRed()[0]; blk.state='carried'; Tm.threwThisWindow=true;
+        if(height(Tm)<6){ Tm.pen++; log(`<span class="bad">${Tm.team}: threw with tower ${height(Tm)} &lt; 6 → −1 (§5.8.4.39)</span>`,''); }
+        yield* infer(arm); yield* pickObj(arm,{...blk, h:40, get x(){return blk.x}, get y(){return blk.y}, set x(v){blk.x=v}, set y(v){blk.y=v}, set z(v){blk.z=v}, held:null});
+        arm.held=blk;
+        const edge={x:Tm.cx+(Tm.team==='A'?170:-170), y:800}; yield* moveTo(arm,edge.x,edge.y,230,5);
+        // launch (controlled robotic motion)
+        arm.held=null; blk.state='flying'; Tm.thrown++;
+        const target={x:other.cx+gauss(70*(1-policy.acc)*2+25), y:other.cy+gauss(40)};
+        const dur=1.1; world.proj.push({blk, x0:blk.x,y0:blk.y, x1:target.x,y1:target.y, t0:sim.t, dur, peak:260, other});
+        log(`${arm.id}: red block thrown toward opponent tower (§5.8.4.28‑29)`,'ev');
+        yield* grip(arm,1); continue;
+      }
+      // build: pick a stock block (blue first unless command says red)
+      let stock=Tm.lastCmd==='red'? [...Tm.stockRed(),...Tm.stockBlue()] : [...Tm.stockBlue(),...Tm.stockRed()];
+      stock=stock.filter(b=>Math.hypot(b.x-arm.bx,b.y-arm.by)<REACH_MAX-10);
+      if(!stock.length){ yield* wait(0.5); continue; }
+      const blk=stock[0]; blk.state='carried';
+      yield* infer(arm);
+      yield* moveTo(arm,blk.x,blk.y,120); yield* moveTo(arm,blk.x,blk.y,24,3); yield* grip(arm,0.15); arm.held=blk;
+      const topZ=height(Tm)*40;
+      yield* moveTo(arm,blk.x,blk.y,topZ+120);
+      const reinforce=Tm.lastCmd==='reinforce';
+      const err=gauss((1-policy.acc)*(reinforce?10:22)*policy.jitter)*(1+height(Tm)*0.08);
+      yield* moveTo(arm,Tm.cx+err,Tm.cy+gauss(4),topZ+100,5);
+      yield* moveTo(arm,Tm.cx+err,Tm.cy,topZ+22,3);
+      arm.held=null; blk.state='tower'; blk.x=Tm.cx+err; blk.y=Tm.cy; blk.z=topZ; Tm.blocks.push(blk); Tm.misalign+=Math.abs(err);
+      yield* grip(arm,1); yield* moveTo(arm,Tm.cx+err,Tm.cy,topZ+140);
+      sim.episodes++; sim.attempts++; sim.successes++;
+      // stability check
+      const lean=Tm.blocks.reduce((a,b)=>a+(b.x-Tm.cx),0)/Tm.blocks.length;
+      const pCollapse = clamp((Math.abs(lean)-12)/40,0,1)*clamp((height(Tm)-4)/6,0,1)*0.35;
+      if(Math.random()<pCollapse){ collapse(Tm, Math.ceil(height(Tm)*0.5), 'instability'); }
+    }
+  }
+  function collapse(Tm,n,why){ const fall=Tm.blocks.splice(Math.max(0,Tm.blocks.length-n)); fall.forEach(b=>{b.state='stock'; b.x=Tm.cx+gauss(90); b.y=Tm.cy+rnd(120,200); b.z=0;}); Tm.collapses++; world.notes.push({x:Tm.cx,y:Tm.cy-60,txt:`COLLAPSE (${why}) −${n}`,t:sim.t}); log(`<span class="bad">${Tm.team}: tower lost ${n} block(s) — ${why}</span>`,''); }
+  for(const team of ['A','B']){ const Tm=T[team]; Tm.stockRed=()=>world.blocks.filter(b=>b.team===team&&b.color==='red'&&b.state==='stock'); Tm.stockBlue=()=>world.blocks.filter(b=>b.team===team&&b.color==='blue'&&b.state==='stock'); }
+  spawn(builder(A1,T.A)); spawn(builder(A2,T.A)); spawn(builder(B1,T.B)); spawn(builder(B2,T.B));
+  // projectiles
+  spawn((function*(){ while(!T.over){ for(const p of world.proj){ const u=clamp((sim.t-p.t0)/p.dur,0,1); p.blk.x=p.x0+(p.x1-p.x0)*u; p.blk.y=p.y0+(p.y1-p.y0)*u; p.blk.z=p.peak*4*u*(1-u)+ (p.other.blocks.length*40)*(1-u)*0.3;
+      if(u>=1){ p.blk.state='stock'; p.blk.team=p.other.team; p.blk.z=0; // recovered by opponent (§5.8.4.16)
+        const d=Math.hypot(p.blk.x-p.other.cx,p.blk.y-p.other.cy); if(d<70 && p.other.blocks.length>0){ collapse(p.other, Math.min(p.other.blocks.length, Math.ceil(p.other.blocks.length*0.4)), 'hit by red block'); }
+        else log(`red block missed (${d.toFixed(0)} mm) — now recoverable by ${p.other.team} (§5.8.4.16)`,''); p.done=true; } }
+      world.proj=world.proj.filter(p=>!p.done); yield; } })());
+  // whistle / command windows every 30 s
+  spawn((function*(){ while(!T.over){ yield* wait(30); if(T.over)break; T.window=true; T.windowEnd=sim.t+30; world.notes.push({x:850,y:640,txt:'🔔 WHISTLE — 30 s COMMAND WINDOW',t:sim.t,life:3});
+      for(const team of ['A','B']){ const Tm=T[team]; Tm.threwThisWindow=false; const h=Tm.blocks.length; const oh=T[team==='A'?'B':'A'].blocks.length; let cmd=null;
+        if(Tm.strategy==='aggressive'){ cmd = (Tm.stockRed().length&&(h>=6||Math.random()<0.25)) ? 'throw' : (Math.abs(Tm.misalign/Math.max(1,h))>14?'reinforce':'build'); }
+        else { if(h>=6 && oh>=h && Tm.stockRed().length && Math.random()<0.6) cmd='throw'; else if(Tm.misalign/Math.max(1,h)>12) cmd='reinforce'; else if(Math.random()<0.35) cmd='build'; else cmd=null; }
+        if(cmd&&policy.lang===false && Math.random()<0.4){ log(`${team}: operator says "${cmdText(cmd)}" — <span class="bad">policy ${policy.name} is not language‑conditioned; intent ignored</span>`,'ev'); Tm.cmds++; continue; }
+        if(cmd){ Tm.lastCmd=cmd; Tm.cmds++; log(`${team} operator → "<b>${cmdText(cmd)}</b>" (cmd #${Tm.cmds}, intent only §5.8.4.26)`,'ev'); } else log(`${team} operator: no command (fewer commands = advantage §5.8.4.24)`,'');
+      }
+      yield* wait(30); T.window=false; } })());
+  function cmdText(c){ return {throw:'use a red block on their tower', reinforce:'reinforce the base', build:'prioritize height', red:'use a red block'}[c]; }
+  const t0=sim.t; while(sim.t-t0<R.limit) yield;
+  T.over=true; world.notes.push({x:850,y:640,txt:'MATCH END — 5 s STABILITY CHECK (§5.8.4.36)',t:sim.t,life:5}); yield* wait(5);
+  for(const team of ['A','B']){ const Tm=T[team]; const q=clamp(10-Tm.misalign/Math.max(1,Tm.blocks.length)/3,0,10); Tm.final={height:Tm.blocks.length, quality:q.toFixed(1), pen:Tm.pen, cmds:Tm.cmds}; }
+  const a=T.A.final,b=T.B.final; const sa=a.height*10+ +a.quality - a.pen - a.cmds*0.5, sb=b.height*10+ +b.quality - b.pen - b.cmds*0.5;
+  const win= sa===sb?'tie — judges decide':(sa>sb?'Team A':'Team B');
+  R.finished=true; results.final=`${win}`;
+  log(`<span class="sys">■ FINAL · A: ${a.height} blocks, quality ${a.quality}, −${a.pen} pen, ${a.cmds} cmds · B: ${b.height} blocks, quality ${b.quality}, −${b.pen} pen, ${b.cmds} cmds → <b>${win}</b> (height primary §5.8.4.37)</span>`,'sys');
+  yield* wait(4); if(sim.auto) nextRound();
+}
+
+// ---------- round orchestration ----------
+const ORDER=['g1r1','g1r2','g1r3','g2r1','g2r2','g2r3','final'];
+const results={};
+const STARTERS={g1r1:()=>game1(1), g1r2:()=>game1(2), g1r3:()=>game1(3), g2r1:game2Pouring, g2r2:game2Folding, g2r3:game2Wrap, final:finalDuel};
+function startRound(key){ resetWorld(); sim.runners=[]; spawn(STARTERS[key]()); document.querySelectorAll('[data-r]').forEach(b=>b.classList.toggle('on',b.dataset.r===key)); setInsight(key); }
+function nextRound(){ const i=ORDER.indexOf(sim.round?sim.round.key:'');
+  startRound(ORDER[(i+1)%ORDER.length]); }
+
+const INSIGHTS={
+ g1r1:`<b>Round 1 is a perception sanity check.</b> Colour sort with sparse objects (§5.8.1.29) is where ACT‑style chunked policies shine: the scene is static, so a 100‑step open‑loop chunk rarely goes stale. In LeRobot terms this is the <b>observation.images.top → action</b> baseline you should nail before anything else. Watch the <i>wrong‑bin</i> penalties: each costs the object's own points (§5.8.1.57), so a 5‑point hexagonal prism in the wrong bin is a 10‑point swing. Train on organiser filament colours (eSun PLA) — matte finish is specified (§5.8.1.17).`,
+ g1r2:`<b>Round 2 decouples shape from colour.</b> The mapping cube→red, cylinder→blue, dodecahedron→green, hexprism→yellow (§5.8.1.45) means the policy must ignore the dominant visual cue it just learned. Denser placement with object contact is allowed (§5.8.1.29), so occlusion matters: the side camera on the 25 mm pole earns its place here. Data tip: record demonstrations with <b>randomised colour‑shape pairings</b> so the model cannot shortcut on colour.`,
+ g1r3:`<b>Round 3 is the closed‑loop test.</b> A judge moves bins and nudges objects <i>while the arm is moving</i> (§5.8.1.51‑52). Any policy that commits to a long action chunk from a single frame will place into empty table. Watch the orange <b>RE‑PLAN</b> flashes: the sim re‑targets from the live frame every tick. For LeRobot this argues for shorter <code>n_action_steps</code>, temporal ensembling, or a diffusion policy with a short horizon, and for training data that includes mid‑episode target changes.`,
+ g2r1:`<b>Pouring is a bimanual, granular‑media task.</b> One arm must control the cup and the other must hold/stabilise the bowl, or you forfeit full credit (§5.8.1.96). Scoring is dominated by mass transferred (60 pts for ≥120 g of 125 g) and spillage (20 pts for ≤10 g). Alignment error of the cup lip over the 140 mm bowl is the whole game: the sim injects a policy‑dependent offset. Wrist‑roll is the critical action dimension; log it at high rate.`,
+ g2r2:`<b>Folding is deformable‑object manipulation</b>, the classic diffusion‑policy showcase. Two folds per cloth, both arms meaningful on every cloth (§5.8.1.114). Alignment within 20 mm earns 5 pts per cloth; beyond 50 mm earns nothing. Note the rulebook inconsistency: four cloths are listed (§5.8.1.104) but "all three" appears in the completion text; 4 × 15 = 60 matches the max, so plan for four. A 5 s validation period follows (§5.8.1.122).`,
+ g2r3:`<b>Wrap &amp; Pack is the longest horizon task</b>: wrap (≥70% coverage = 30 pts), place in box (20), close all flaps (25), stability (5), with bubble wrap that tears if handled roughly (−5). The sequence is free but the object must be wrapped before boxing (§5.8.1.133). This is where a VLA with sub‑task language ("wrap", "box", "close") or a hierarchical policy helps; a single flat policy struggles with 4 distinct phases in 4 minutes.`,
+ final:`<b>The Duel adds adversarial dynamics and language grounding.</b> Arms must build autonomously; the human may only speak intent in 30 s whistle windows ("prioritize height", "reinforce the base", "use a red block" §5.8.4.26), and fewer commands score better (§5.8.4.24). Throws need a tower ≥6 blocks (§5.8.4.27) and only red blocks (§5.8.4.19); a thrown red block becomes the opponent's to recover (§5.8.4.16). Only a language‑conditioned policy (SmolVLA here) can act on commands; switch policies to see the difference.`
+};
+function setInsight(k){ document.getElementById('insightBox').innerHTML=INSIGHTS[k]||''; }
+
+// ---------- rendering ----------
+const cv=document.getElementById('main'), ctx=cv.getContext('2d');
+let S=0.5, OX=0, OY=0;
+function fit(){ const r=cv.getBoundingClientRect(); cv.width=r.width*devicePixelRatio; cv.height=r.height*devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  const pad=24, sideW=r.width*0.26; S=Math.min((r.width-sideW-pad*2)/WS.w,(r.height-pad*2-40)/WS.h); OX=pad; OY=pad+34; }
+window.addEventListener('resize',fit); fit();
+const P=(x,y)=>[OX+x*S, OY+y*S];
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function drawWorkspace(){
+  const r=cv.getBoundingClientRect();
+  ctx.fillStyle='#0f1420'; ctx.fillRect(0,0,r.width,r.height);
+  // table
+  const [x,y]=P(0,0); const w=WS.w*S,h=WS.h*S;
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=24; ctx.fillStyle=C.table; rr(x,y,w,h,6); ctx.fill(); ctx.restore();
+  // grid 100 mm
+  ctx.strokeStyle='rgba(0,0,0,.06)'; ctx.lineWidth=1; for(let gx=0;gx<=WS.w;gx+=100){ const [a,b]=P(gx,0); ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(a,b+h); ctx.stroke(); } for(let gy=0;gy<=WS.h;gy+=100){ const [a,b]=P(0,gy); ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(a+w,b); ctx.stroke(); }
+  // dimension labels
+  ctx.fillStyle='#6b7893'; ctx.font='11px '+getComputedStyle(document.body).getPropertyValue('--mono'); ctx.fillText('1700 mm', x+w/2-22, y-8); ctx.save(); ctx.translate(x-8,y+h/2); ctx.rotate(-Math.PI/2); ctx.fillText('1200 mm',-22,0); ctx.restore();
+  // camera rigs
+  if(sim.flags.cam && !world.duel){ ctx.strokeStyle='#8b93a7'; ctx.lineWidth=4; const [hx1,hy]=P(400,560),[hx2]=P(1300,560); ctx.beginPath(); ctx.moveTo(hx1,hy); ctx.lineTo(hx2,hy); ctx.stroke();
+    ctx.lineWidth=3; [[400,440],[1300,440]].forEach(([px,py])=>{ const [a,b]=P(px,py); ctx.beginPath(); ctx.moveTo(a,b+120*S); ctx.lineTo(a,b+120*S+90*S); ctx.stroke(); });
+    ctx.fillStyle='#242b3a'; const [cx,cy]=P(850,560); rr(cx-10,cy-8,20,16,3); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.beginPath(); ctx.arc(cx,cy,3,0,7); ctx.fill();
+    ctx.fillStyle='#6b7893'; ctx.font='10px sans-serif'; ctx.fillText('H‑rig top camera (4040 T‑slot)', cx+16, cy+4);
+    const [sx,sy]=P(1690,850); ctx.fillStyle='#242b3a'; rr(sx-6,sy-12,12,24,3); ctx.fill(); ctx.fillStyle='#f6ad55'; ctx.beginPath(); ctx.arc(sx,sy,3,0,7); ctx.fill(); ctx.fillStyle='#6b7893'; ctx.fillText('side cam', sx-40, sy+26); }
+  // reach radii
+  if(sim.flags.reach){ for(const a of world.arms){ const [bx,by]=P(a.bx,a.by); ctx.strokeStyle=a.color; ctx.globalAlpha=.35; ctx.setLineDash([6,6]); ctx.lineWidth=1.2; ctx.beginPath(); ctx.arc(bx,by,REACH_MAX*S,0,7); ctx.stroke(); ctx.beginPath(); ctx.arc(bx,by,REACH_MIN*S,0,7); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1; } }
+  // source area tape
+  if(world.tape){ const t=world.tape; const [a,b]=P(t.x,t.y); ctx.strokeStyle=C.tape; ctx.lineWidth=Math.max(2,15*S); ctx.strokeRect(a,b,t.w*S,t.h*S); ctx.fillStyle='rgba(0,0,0,.45)'; ctx.font='10px sans-serif'; ctx.fillText('SOURCE AREA (black tape)', a+6, b-6); }
+  if(world.zone){ const z=world.zone; const [a,b]=P(z.x,z.y); ctx.strokeStyle=C.tape; ctx.lineWidth=Math.max(2,12*S); ctx.strokeRect(a,b,z.w*S,z.h*S); ctx.fillStyle='rgba(0,0,0,.5)'; ctx.font='10px sans-serif'; ctx.fillText('TARGET PLACEMENT ZONE', a+4, b-6); }
+}
+function shade(hex, k){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=clamp(r*k,0,255); g=clamp(g*k,0,255); b=clamp(b*k,0,255); return `rgb(${r|0},${g|0},${b|0})`; }
+function drawShadow(x,y,z,rad){ const [a,b]=P(x,y); const s=1+z/600; ctx.fillStyle=`rgba(0,0,0,${0.28/(1+z/150)})`; ctx.beginPath(); ctx.ellipse(a+z*0.08*S,b+z*0.16*S,rad*S*s,rad*S*s*0.8,0,0,7); ctx.fill(); }
+function drawObject(o){
+  const col=C[o.color]; const lift=1+o.z/500;
+  drawShadow(o.x,o.y,o.z,o.d/2);
+  const [a,b]=P(o.x,o.y-o.z*0.35); const d=o.d*S*lift;
+  ctx.save(); ctx.translate(a,b); ctx.rotate(o.rot);
+  ctx.fillStyle=col; ctx.strokeStyle=shade(col,0.6); ctx.lineWidth=1.2;
+  if(o.shape==='cube'){ rr(-d/2,-d/2,d,d,2); ctx.fill(); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.25)'; rr(-d/2,-d/2,d,d*0.35,2); ctx.fill(); }
+  else if(o.shape==='cylinder'){ ctx.beginPath(); ctx.arc(0,0,d/2,0,7); ctx.fill(); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.3)'; ctx.beginPath(); ctx.arc(-d*0.12,-d*0.12,d*0.3,0,7); ctx.fill(); }
+  else if(o.shape==='hexprism'){ poly(6,d/2); ctx.fill(); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.22)'; poly(6,d/3); ctx.fill(); }
+  else { poly(10,d/2); ctx.fill(); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,.22)'; poly(5,d/3.2); ctx.fill(); }
+  ctx.restore();
+}
+function poly(n,r){ ctx.beginPath(); for(let i=0;i<n;i++){ const a=i/n*Math.PI*2-Math.PI/2; const x=Math.cos(a)*r,y=Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); }
+function drawBins(){
+  for(const b of world.bins){ const col=C[b.color]; const [a,c]=P(b.x,b.y); const w=b.w*S, h=b.h*S; const sh=b.shake>0?Math.sin(sim.t*60)*b.shake*3:0; b.shake=Math.max(0,b.shake-0.016);
+    ctx.save(); ctx.translate(sh,0); ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=8; ctx.fillStyle=shade(col,0.55); rr(a-w/2,c-h/2,w,h,4); ctx.fill(); ctx.restore();
+    ctx.strokeStyle=col; ctx.lineWidth=Math.max(2,6*S); rr(a-w/2+sh,c-h/2,w,h,4); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font=`bold ${Math.max(8,9)}px sans-serif`; ctx.textAlign='center'; ctx.fillText('BIN‑'+b.color.toUpperCase(), a+sh, c-h/2-5); ctx.fillText(b.items.length, a+sh, c+4); ctx.textAlign='left';
+  }
+}
+function drawArm(arm){
+  const k=arm.ik(arm.cur);
+  // trail / action chunk
+  if(sim.flags.chunk){ const n=Math.min(policy.chunk,40); const d=dist3(arm.cur,arm.tgt); if(d>8){ for(let i=1;i<=n;i++){ const u=i/n; const x=arm.cur.x+(arm.tgt.x-arm.cur.x)*u, y=arm.cur.y+(arm.tgt.y-arm.cur.y)*u, z=arm.cur.z+(arm.tgt.z-arm.cur.z)*u; const [a,b]=P(x,y-z*0.35); ctx.fillStyle=arm.replan>0?'rgba(246,173,85,.8)':'rgba(79,209,197,.55)'; ctx.beginPath(); ctx.arc(a,b,Math.max(1,2.2-u*1.5),0,7); ctx.fill(); } } }
+  if(arm.trail.length>2){ ctx.strokeStyle=arm.color; ctx.globalAlpha=.18; ctx.lineWidth=2; ctx.beginPath(); arm.trail.forEach((p,i)=>{ const [a,b]=P(p.x,p.y-p.z*0.35); i?ctx.lineTo(a,b):ctx.moveTo(a,b); }); ctx.stroke(); ctx.globalAlpha=1; }
+  // projected 2D points (elevation lifts things up the screen)
+  const pp=(p)=>P(p.x,p.y-p.z*0.35);
+  const [bx,by]=P(arm.bx,arm.by);
+  const top=pp(k.top), el=pp(k.elbow), wr=pp(k.wrist), tip=pp(k.tip);
+  // ground shadow (offset by height)
+  ctx.save(); ctx.globalAlpha=.22; ctx.fillStyle='#000';
+  const sh=(p)=>P(p.x+p.z*0.10,p.y+p.z*0.18);
+  capsule(sh(k.top),sh(k.elbow),40*S,'#000',true); capsule(sh(k.elbow),sh(k.wrist),30*S,'#000',true); capsule(sh(k.wrist),sh(k.tip),22*S,'#000',true);
+  ctx.restore();
+  // base plate + clamps + shoulder-pan servo
+  ctx.fillStyle='#262e40'; rr(bx-62*S,by-50*S,124*S,100*S,6*S); ctx.fill(); ctx.strokeStyle='#3b4660'; ctx.lineWidth=1; rr(bx-62*S,by-50*S,124*S,100*S,6*S); ctx.stroke();
+  for(const [cx,cy] of [[-52,-38],[52,-38],[-52,38],[52,38]]){ ctx.fillStyle='#8a94ad'; ctx.beginPath(); ctx.arc(bx+cx*S,by+cy*S,4*S,0,7); ctx.fill(); }
+  ctx.fillStyle='#55607a'; rr(bx-84*S,by-18*S,26*S,36*S,3); ctx.fill(); rr(bx+58*S,by-18*S,26*S,36*S,3); ctx.fill();   // table clamps
+  servo(bx,by,k.pan,46*S,46*S,'#1e2535');                                                                    // pan servo body
+  const g=ctx.createRadialGradient(bx-6*S,by-6*S,2,bx,by,34*S); g.addColorStop(0,'#5d6b8a'); g.addColorStop(1,'#2b3345'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bx,by,34*S,0,7); ctx.fill();
+  // links as shaded capsules: upper arm, forearm, wrist link
+  capsule(top,el,34*S,arm.color); capsule(el,wr,27*S,arm.color); capsule(wr,tip,19*S,shade(arm.color,0.9));
+  // servo housings at shoulder-lift, elbow, wrist-flex (rotated along the outgoing link)
+  const ang=(p,q)=>Math.atan2(q[1]-p[1],q[0]-p[0]);
+  servo(top[0],top[1],ang(top,el),52*S,40*S,'#1c2333'); servo(el[0],el[1],ang(el,wr),44*S,34*S,'#1c2333'); servo(wr[0],wr[1],ang(wr,tip),36*S,28*S,'#1c2333');
+  // wrist camera (LeRobot-style wrist cam)
+  ctx.save(); ctx.translate(wr[0],wr[1]); ctx.rotate(ang(wr,tip)); ctx.fillStyle='#0f131c'; rr(10*S,-24*S,16*S,12*S,2); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.beginPath(); ctx.arc(18*S,-18*S,3*S,0,7); ctx.fill(); ctx.restore();
+  // gripper: wrist-roll housing + two fingers with rubber pads, opening driven by grip (0..1)
+  const gAng=ang(wr,tip); const open=(7+arm.grip*24)*S;
+  ctx.save(); ctx.translate(tip[0],tip[1]); ctx.rotate(gAng+arm.roll*0.6);
+  ctx.fillStyle='#2a3245'; rr(-16*S,-14*S,22*S,28*S,3); ctx.fill();                 // roll housing / gripper servo
+  ctx.fillStyle='#cbd5e0'; rr(2*S,-open-5*S,30*S,8*S,2); ctx.fill(); rr(2*S,open-3*S,30*S,8*S,2); ctx.fill();   // fingers
+  ctx.fillStyle='#1f2937'; rr(22*S,-open-3*S,10*S,4*S,1); ctx.fill(); rr(22*S,open-1*S,10*S,4*S,1); ctx.fill();   // pads
+  ctx.fillStyle='#94a3b8'; rr(4*S,-open-1*S,6*S,open*2+2*S,1); ctx.fill();          // finger carriage
+  ctx.restore();
+  // label + status
+  ctx.fillStyle=arm.color; ctx.font='bold 10px sans-serif'; ctx.fillText(arm.id, bx-6, by+50*S+12);
+  const [tx,ty]=tip;
+  if(arm.busy){ ctx.fillStyle='rgba(255,255,255,.75)'; ctx.font='9px monospace'; ctx.fillText(`infer ${sim.inferenceMs.toFixed(0)} ms`, tx+14, ty-12); }
+  if(arm.replan>0){ ctx.fillStyle='#f6ad55'; ctx.font='bold 10px sans-serif'; ctx.fillText('RE‑PLAN (live frame)', tx+14, ty+4); }
+  if(arm.yielding){ ctx.fillStyle='#a0aec0'; ctx.font='9px sans-serif'; ctx.fillText('yielding (collision avoidance)', tx+14, ty+16); }
+}
+// shaded capsule between two screen points
+function capsule(p,q,w,color,flat=false){
+  const dx=q[0]-p[0], dy=q[1]-p[1]; const L=Math.hypot(dx,dy)||0.01; const nx=-dy/L, ny=dx/L;
+  if(!flat){ const gr=ctx.createLinearGradient(p[0]+nx*w/2,p[1]+ny*w/2,p[0]-nx*w/2,p[1]-ny*w/2); gr.addColorStop(0,shade(color,0.55)); gr.addColorStop(0.35,color); gr.addColorStop(0.6,shade(color,1.25)); gr.addColorStop(1,shade(color,0.6)); ctx.fillStyle=gr; }
+  ctx.beginPath(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=w; ctx.strokeStyle=ctx.fillStyle; ctx.moveTo(p[0],p[1]); ctx.lineTo(q[0],q[1]); ctx.stroke();
+  if(!flat){ ctx.strokeStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(p[0]+nx*w/2,p[1]+ny*w/2); ctx.lineTo(q[0]+nx*w/2,q[1]+ny*w/2); ctx.moveTo(p[0]-nx*w/2,p[1]-ny*w/2); ctx.lineTo(q[0]-nx*w/2,q[1]-ny*w/2); ctx.stroke(); }
+}
+// servo housing (STS3215-style block) centred at x,y rotated by a
+function servo(x,y,a,w,h,col){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(a);
+  ctx.fillStyle=col; rr(-w/2,-h/2,w,h,3); ctx.fill(); ctx.strokeStyle='#4a5670'; ctx.lineWidth=1; rr(-w/2,-h/2,w,h,3); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.08)'; rr(-w/2+2,-h/2+2,w-4,h*0.35,2); ctx.fill();
+  ctx.fillStyle='#8a94ad'; ctx.beginPath(); ctx.arc(0,0,Math.min(w,h)*0.22,0,7); ctx.fill(); ctx.fillStyle='#1b2233'; ctx.beginPath(); ctx.arc(0,0,Math.min(w,h)*0.1,0,7); ctx.fill();
+  for(const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){ ctx.fillStyle='#5a6680'; ctx.beginPath(); ctx.arc(sx*(w/2-4),sy*(h/2-4),1.6,0,7); ctx.fill(); }
+  ctx.restore();
+}
+function drawCupBowl(){
+  if(world.bowl){ const o=world.bowl; drawShadow(o.x,o.y,o.z,o.d/2); const [a,b]=P(o.x,o.y-o.z*0.35); ctx.fillStyle='#4a5568'; ctx.beginPath(); ctx.arc(a,b,o.d/2*S,0,7); ctx.fill(); ctx.fillStyle='#2d3748'; ctx.beginPath(); ctx.arc(a,b,o.d/2*S*0.8,0,7); ctx.fill();
+    const rice=world.grains.filter(g=>g.st===1).length; if(rice){ ctx.fillStyle='#f7f3e8'; ctx.beginPath(); ctx.arc(a,b,Math.min(o.d/2*S*0.75, 6+rice*0.09*S*2),0,7); ctx.fill(); } ctx.fillStyle='#cbd5e0'; ctx.font='9px sans-serif'; ctx.fillText('bowl Ø140', a-20, b+o.d/2*S+12); }
+  if(world.cup){ const o=world.cup; drawShadow(o.x,o.y,o.z,o.d/2); const [a,b]=P(o.x,o.y-o.z*0.35); ctx.save(); ctx.translate(a,b); ctx.rotate(o.tilt*0.5); ctx.fillStyle='#a0aec0'; rr(-o.d/2*S,-o.h*0.55*S,o.d*S,o.h*0.55*S*2,4); ctx.fill(); ctx.fillStyle='#f7f3e8'; const fill=1-world.grains.length/250; rr(-o.d/2*S+2,-o.h*0.55*S*fill+ (o.h*0.55*S*(1-fill))*0, o.d*S-4, Math.max(0,o.h*0.55*S*2*fill),3); ctx.fill(); ctx.restore(); ctx.fillStyle='#cbd5e0'; ctx.font='9px sans-serif'; ctx.fillText('cup Ø60 · 125 g', a-28, b+o.h*0.55*S+12); }
+  // grains
+  for(const g of world.grains){ if(g.st===0){ const [a,b]=P(g.x,g.y-g.z*0.35); ctx.fillStyle='#f7f3e8'; ctx.fillRect(a-1,b-1,2,2); } else if(g.st===2){ const [a,b]=P(g.x,g.y); ctx.fillStyle='rgba(247,243,232,.9)'; ctx.fillRect(a-1,b-1,2,2); } }
+}
+function updateGrains(dt){
+  if(!world.bowl) return;
+  for(const g of world.grains){ if(g.st!==0) continue; g.vz-=980*dt; g.x+=g.vx*dt; g.y+=g.vy*dt; g.z+=g.vz*dt;
+    const bw=world.bowl; const inside=Math.hypot(g.x-bw.x,g.y-bw.y)<bw.d/2-4;
+    if(inside && g.z<=bw.z+bw.h*0.5){ g.st=1; } else if(g.z<=0){ g.st=2; g.z=0; } }
+}
+function drawCloths(){
+  for(const cl of world.cloths){ const col=C[cl.color]; const [a,b]=P(cl.x,cl.y-cl.z*0.35); let w=cl.w*S,h=cl.h*S;
+    drawShadow(cl.x,cl.y,cl.z,Math.max(cl.w,cl.h)/2*0.9);
+    ctx.fillStyle=col; ctx.strokeStyle=shade(col,0.7); ctx.lineWidth=1;
+    if(cl.stage===0 && cl.foldStage===1){ // folding stage 1: top half flips down
+      rr(a-w/2,b-h/2,w,h,2); ctx.fill(); ctx.stroke(); const p=cl.prog; const fh=h/2*(1-Math.abs(1-2*p))*0+h/2; // flap
+      ctx.fillStyle=shade(col,0.85); const flapY = b-h/2 + h*p; rr(a-w/2, Math.min(flapY, b), w, Math.abs(h/2 - (flapY-b)) , 2); ctx.fill(); }
+    else if(cl.stage===1 && cl.foldStage===2){ h=cl.h/2*S; const cy=b+cl.h/4*S; rr(a-w/2,cy-h/2,w,h,2); ctx.fill(); ctx.stroke(); const p=cl.prog; ctx.fillStyle=shade(col,0.8); const fx=a-w/2+w*p; rr(Math.min(fx,a), cy-h/2, Math.abs(a-fx), h, 2); ctx.fill(); }
+    else if(cl.stage===1){ h=cl.h/2*S; const cy=b+cl.h/4*S; rr(a-w/2,cy-h/2,w,h,2); ctx.fill(); ctx.stroke(); ctx.strokeStyle='rgba(0,0,0,.15)'; ctx.beginPath(); ctx.moveTo(a-w/2,cy); ctx.lineTo(a+w/2,cy); ctx.stroke(); }
+    else if(cl.stage===2){ rr(a-w/2,b-h/2,w,h,2); ctx.fill(); ctx.stroke(); ctx.strokeStyle='rgba(0,0,0,.15)'; ctx.beginPath(); ctx.moveTo(a,b-h/2); ctx.lineTo(a,b+h/2); ctx.moveTo(a-w/2,b); ctx.lineTo(a+w/2,b); ctx.stroke(); }
+    else { rr(a-w/2,b-h/2,w,h,2); ctx.fill(); ctx.stroke(); }
+  }
+}
+function drawWrap(){
+  if(world.sheet && world.box){ const s=world.sheet, m=world.mascot, bx=world.box;
+    // box
+    drawShadow(bx.x,bx.y,0,bx.l/2); const [a,b]=P(bx.x,bx.y); const L=bx.l*S, Wd=bx.w*S; ctx.fillStyle='#b7935c'; rr(a-L/2,b-Wd/2,L,Wd,3); ctx.fill(); ctx.fillStyle='#8a6a3a'; rr(a-L/2+4,b-Wd/2+4,L-8,Wd-8,2); ctx.fill();
+    // flaps closing (two long flaps from y sides, two short from x sides)
+    const f=bx.flaps; ctx.fillStyle='#c9a46d'; rr(a-L/2,b-Wd/2,L,Wd/2*f,2); ctx.fill(); rr(a-L/2,b+Wd/2-Wd/2*f,L,Wd/2*f,2); ctx.fill(); ctx.fillStyle='#d6b27a'; rr(a-L/2,b-Wd/2,L/2*Math.max(0,f-0.3)/0.7*0.6,Wd,2); ctx.fill(); rr(a+L/2-L/2*Math.max(0,f-0.3)/0.7*0.6,b-Wd/2,L/2*Math.max(0,f-0.3)/0.7*0.6,Wd,2); ctx.fill();
+    ctx.fillStyle='#cbd5e0'; ctx.font='9px sans-serif'; ctx.fillText('box 229×152×152', a-36, b+Wd/2+12);
+    // mascot (hidden if boxed & flaps closed)
+    const boxed = m.x===bx.x && m.y===bx.y;
+    if(!(boxed && f>0.6)){
+      drawShadow(m.x,m.y,m.z,m.d/2); const [mx,my]=P(m.x,m.y-m.z*0.35); const r=m.d/2*S*(1+m.z/500);
+      ctx.fillStyle='#e2e8f0'; ctx.beginPath(); ctx.arc(mx,my,r,0,7); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.beginPath(); ctx.arc(mx-r*0.3,my-r*0.1,r*0.18,0,7); ctx.arc(mx+r*0.3,my-r*0.1,r*0.18,0,7); ctx.fill(); ctx.fillStyle='#1a202c'; ctx.font='bold 9px sans-serif'; ctx.fillText('3‑e', mx-8, my+r+10);
+      if(!boxed){ // sheet under / around mascot
+        const [sx,sy]=P(s.x,s.y); const half=s.s/2*S*(1-s.wrap*0.55); ctx.save(); ctx.globalAlpha=0.55; ctx.fillStyle='#bfe3ff'; rr(sx-half,sy-half,half*2,half*2,4); ctx.fill(); ctx.globalAlpha=0.9; ctx.strokeStyle='#8fc6f0'; for(let i=-half+6;i<half;i+=9) for(let j=-half+6;j<half;j+=9){ ctx.beginPath(); ctx.arc(sx+i,sy+j,2.2,0,7); ctx.stroke(); } ctx.restore();
+        if(s.wrap>0){ ctx.strokeStyle='#8fc6f0'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(mx,my,r+4,0,7*s.wrap); ctx.stroke(); } }
+    }
+    if(boxed && m.inBox>0 && m.inBox<1){ ctx.fillStyle='#f56565'; ctx.font='bold 9px sans-serif'; ctx.fillText('partially inside', a-30, b-Wd/2-6); }
+  }
+}
+function drawDuel(){
+  const T=world.duel; if(!T) return;
+  for(const team of ['A','B']){ const Tm=T[team]; const z=Tm.zone; const [a,b]=P(z.x,z.y); ctx.fillStyle='#ffffff'; ctx.fillRect(a,b,z.w*S,z.h*S); ctx.strokeStyle=team==='A'?C.armA1:C.armB1; ctx.lineWidth=3; ctx.strokeRect(a,b,z.w*S,z.h*S); ctx.fillStyle=team==='A'?C.armA1:C.armB1; ctx.font='bold 11px sans-serif'; ctx.fillText(`TEAM ${team} BUILD ZONE · ${Tm.blocks.length} blocks · ${Tm.cmds} cmds`, a+6, b-8); }
+  // stock + flying blocks
+  for(const bk of world.blocks){ if(bk.state==='tower') continue; drawBlock(bk); }
+  // towers (draw in order bottom → top)
+  for(const team of ['A','B']) for(const bk of T[team].blocks) drawBlock(bk,true);
+  if(T.window){ const [a,b]=P(850,610); ctx.fillStyle='rgba(246,173,85,.95)'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.fillText(`COMMAND WINDOW OPEN · ${Math.max(0,T.windowEnd-sim.t).toFixed(0)} s`, a,b); ctx.textAlign='left'; }
+  else { const [a,b]=P(850,610); ctx.fillStyle='rgba(255,255,255,.6)'; ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.fillText(`next whistle in ${Math.max(0,30-((sim.t-T.t0)%60)).toFixed(0)} s`, a,b); ctx.textAlign='left'; }
+}
+function drawBlock(bk,inTower=false){ const col=bk.color==='red'?C.red:C.blue; drawShadow(bk.x,bk.y,bk.z,bk.s/2); const [a,b]=P(bk.x,bk.y-bk.z*0.35); const s=bk.s*S*(1+bk.z/900); ctx.fillStyle=col; ctx.strokeStyle=shade(col,0.6); ctx.lineWidth=1; rr(a-s/2,b-s/2,s,s,2); ctx.fill(); ctx.stroke(); if(inTower){ ctx.fillStyle='rgba(255,255,255,.25)'; rr(a-s/2,b-s/2,s,s*0.3,2); ctx.fill(); } }
+
+function drawSideView(){
+  // elevation inset on the right side of the stage: for the duel show both towers; otherwise the L and R arms in the (r, z) plane
+  const r=cv.getBoundingClientRect(); const x0=OX+WS.w*S+16, y0=OY, w=r.width-x0-16, h=WS.h*S;
+  ctx.fillStyle='#0b0f17'; rr(x0,y0,w,h,8); ctx.fill(); ctx.strokeStyle='#223047'; ctx.lineWidth=1; rr(x0,y0,w,h,8); ctx.stroke();
+  ctx.fillStyle='#8a98b3'; ctx.font='10px sans-serif'; ctx.fillText(world.duel?'ELEVATION · towers (height is primary §5.8.4.37)':'ELEVATION · observation.images.side', x0+10, y0+16);
+  const floor=y0+h-28; ctx.strokeStyle='#2a3850'; ctx.beginPath(); ctx.moveTo(x0+8,floor); ctx.lineTo(x0+w-8,floor); ctx.stroke();
+  if(world.duel){ const T=world.duel; const sc=Math.min(0.6,(h-80)/(40*14)); ['A','B'].forEach((team,i)=>{ const Tm=T[team]; const cx=x0+w*(0.3+0.4*i); Tm.blocks.forEach((bk,k)=>{ const col=bk.color==='red'?C.red:C.blue; const s=40*sc; ctx.fillStyle=col; ctx.strokeStyle=shade(col,0.6); rr(cx-s/2+(bk.x-Tm.cx)*sc,floor-(k+1)*s,s,s,1); ctx.fill(); ctx.stroke(); });
+      ctx.fillStyle=team==='A'?C.armA1:C.armB1; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText(`Team ${team}: ${Tm.blocks.length}`, cx, floor+16); ctx.textAlign='left';
+      // 6-block line
+      const y6=floor-6*40*sc; ctx.strokeStyle='rgba(246,173,85,.5)'; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(cx-40,y6); ctx.lineTo(cx+40,y6); ctx.stroke(); ctx.setLineDash([]); });
+    ctx.fillStyle='rgba(246,173,85,.8)'; ctx.font='9px sans-serif'; ctx.fillText('≥6 blocks: throwing allowed', x0+10, floor-6*40*Math.min(0.6,(h-80)/(40*14))-4);
+    return; }
+  const arms=world.arms.slice(0,2); const sc=Math.min(0.45,(w-30)/ (REACH_MAX*2.2));
+  const baseX=x0+w/2;
+  arms.forEach((arm,i)=>{ const k=arm.ik(arm.cur); const dir=i===0?-1:1; const px=(rr_)=>baseX+dir*rr_*sc*0.9, pz=(z)=>floor-z*sc;
+    const pts=[[0,0],[0,LINKS.h0],[k.plane.er,k.plane.ez],[k.plane.wr,k.plane.wz],[k.plane.wr,k.plane.tz]].map(([a,b])=>[px(a),pz(b)]);
+    // base block + pan servo
+    ctx.fillStyle='#262e40'; rr(pts[0][0]-30*sc*1.3,pts[0][1]-10,60*sc*1.3,10,2); ctx.fill();
+    servo(pts[0][0],pts[1][1]+(pts[0][1]-pts[1][1])*0.5,0,30*sc*1.6,LINKS.h0*sc,'#1e2535');
+    // links
+    capsule(pts[1],pts[2],34*sc*0.9,arm.color); capsule(pts[2],pts[3],27*sc*0.9,arm.color); capsule(pts[3],pts[4],19*sc*0.9,shade(arm.color,0.9));
+    const ang=(p,q)=>Math.atan2(q[1]-p[1],q[0]-p[0]);
+    servo(pts[1][0],pts[1][1],ang(pts[1],pts[2]),46*sc,36*sc,'#1c2333'); servo(pts[2][0],pts[2][1],ang(pts[2],pts[3]),40*sc,30*sc,'#1c2333'); servo(pts[3][0],pts[3][1],ang(pts[3],pts[4]),32*sc,26*sc,'#1c2333');
+    // wrist cam
+    ctx.fillStyle='#0f131c'; rr(pts[3][0]+(i===0?-18:6),pts[3][1]+4,12,8,2); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.beginPath(); ctx.arc(pts[3][0]+(i===0?-12:12),pts[3][1]+8,2,0,7); ctx.fill();
+    // gripper fingers (side view: fingers point down, opening along x)
+    const gx=pts[4][0], gz=pts[4][1]; const o=4+arm.grip*9; ctx.fillStyle='#2a3245'; rr(gx-10,gz-16,20,10,2); ctx.fill();
+    ctx.fillStyle='#cbd5e0'; rr(gx-o-3,gz-8,4,16,1.5); ctx.fill(); rr(gx+o-1,gz-8,4,16,1.5); ctx.fill(); ctx.fillStyle='#1f2937'; rr(gx-o+1,gz+2,2,6,1); ctx.fill(); rr(gx+o-3,gz+2,2,6,1); ctx.fill();
+    if(arm.held){ const hh=(arm.held.h||40)*sc; ctx.fillStyle=C[arm.held.color]||'#a0aec0'; rr(gx-o+1,gz-2,o*2-2,Math.max(4,hh*0.6),1); ctx.fill(); }
+    ctx.fillStyle=arm.color; ctx.font='bold 10px sans-serif'; ctx.fillText(arm.id, px(0)-6, floor+14);
+    // reach arc
+    ctx.strokeStyle=arm.color; ctx.globalAlpha=.25; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.arc(px(0),pz(LINKS.h0),REACH_MAX*sc*0.9, i===0?Math.PI:-Math.PI/2, i===0?Math.PI*1.5:0); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1; });
+  // z scale
+  ctx.fillStyle='#5a6b88'; ctx.font='9px monospace'; [0,100,200,300].forEach(z=>{ ctx.fillText(z+' mm', x0+8, floor-z*sc+3); });
+  // joint angles readout
+  ctx.fillStyle='#8a98b3'; ctx.font='9px monospace'; arms.forEach((arm,i)=>{ const j=arm.joints(); const txt=`${arm.id}  pan ${(j[0]*57.3).toFixed(0).padStart(4)}° sh ${(j[1]*57.3).toFixed(0).padStart(4)}° el ${(j[2]*57.3).toFixed(0).padStart(4)}° wr ${(j[3]*57.3).toFixed(0).padStart(4)}° g ${(j[5]*100).toFixed(0).padStart(3)}%`; ctx.fillText(txt, x0+10, y0+32+i*13); });
+}
+function drawHUD(){
+  const r=cv.getBoundingClientRect(); const R=sim.round; if(!R) return;
+  ctx.fillStyle='rgba(11,15,23,.85)'; rr(OX,8,OX+WS.w*S-OX,24,6); ctx.fill();
+  ctx.fillStyle='#dbe4f3'; ctx.font='bold 12px sans-serif'; ctx.fillText(R.name, OX+10, 25);
+  const t=R.key==='final'? (sim.t) : sim.t; const left=R.limit-t; ctx.font='12px monospace'; ctx.fillStyle=left<30?'#f56565':'#4fd1c5'; ctx.textAlign='right'; ctx.fillText(`${fmt(Math.min(t,R.limit))} / ${fmt(R.limit)}  ${sim.playing?'':'⏸'}  ${sim.speed.toFixed(2)}×`, OX+WS.w*S-10, 25); ctx.textAlign='left';
+  // progress bar
+  ctx.fillStyle='#1a2235'; ctx.fillRect(OX, 32, WS.w*S, 3); ctx.fillStyle=left<30?'#f56565':'#4fd1c5'; ctx.fillRect(OX,32,WS.w*S*clamp(t/R.limit,0,1),3);
+  // notes
+  world.notes=world.notes.filter(n=>sim.t-n.t<(n.life||2.2));
+  for(const n of world.notes){ const age=(sim.t-n.t)/(n.life||2.2); const [a,b]=P(n.x,n.y); ctx.globalAlpha=1-age; ctx.fillStyle='#f6ad55'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText(n.txt, a, b-age*20); ctx.textAlign='left'; ctx.globalAlpha=1; }
+  if(R.finished){ ctx.fillStyle='rgba(11,15,23,.75)'; const [a,b]=P(850,600); rr(a-150,b-26,300,52,8); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center'; ctx.fillText(R.key==='final'?`Winner: ${results.final}`:`Round score: ${R.score.final} / 100`, a, b+6); ctx.textAlign='left'; }
+}
+
+// ---------- side panels ----------
+const camTop=document.getElementById('camTop').getContext('2d'), camSide=document.getElementById('camSide').getContext('2d');
+function drawCams(){
+  // top camera: crop the workspace region of the main canvas
+  const [a,b]=P(350,600); const w=(1000)*S, h=(520)*S;
+  camTop.fillStyle='#000'; camTop.fillRect(0,0,320,200);
+  try{ camTop.drawImage(cv, a*devicePixelRatio,b*devicePixelRatio,w*devicePixelRatio,h*devicePixelRatio, 0,0,320,200); }catch(e){}
+  camTop.strokeStyle='rgba(79,209,197,.7)'; camTop.lineWidth=1; camTop.strokeRect(0.5,0.5,319,199); camTop.fillStyle='rgba(79,209,197,.9)'; camTop.font='9px monospace'; camTop.fillText(`frame ${sim.frames}  t=${sim.t.toFixed(2)}`,6,12); camTop.fillText('640×480 · rgb', 250, 194);
+  // noise overlay for realism
+  camTop.fillStyle='rgba(255,255,255,.03)'; for(let i=0;i<40;i++) camTop.fillRect(Math.random()*320,Math.random()*200,1,1);
+  // side camera: crop elevation inset
+  const r=cv.getBoundingClientRect(); const x0=OX+WS.w*S+16, y0=OY+40, ww=r.width-x0-16, hh=WS.h*S-40;
+  camSide.fillStyle='#000'; camSide.fillRect(0,0,320,200);
+  try{ camSide.drawImage(cv, x0*devicePixelRatio,y0*devicePixelRatio,ww*devicePixelRatio,hh*devicePixelRatio, 0,0,320,200); }catch(e){}
+  camSide.strokeStyle='rgba(246,173,85,.7)'; camSide.strokeRect(0.5,0.5,319,199); camSide.fillStyle='rgba(246,173,85,.9)'; camSide.font='9px monospace'; camSide.fillText(`frame ${sim.frames}`,6,12);
+}
+const JN=['shoulder_pan','shoulder_lift','elbow_flex','wrist_flex','wrist_roll','gripper'];
+function drawJoints(){
+  const box=document.getElementById('jointsBox'); const arms=world.arms.slice(0,2); let html='';
+  arms.forEach(arm=>{ const j=arm.joints(); html+=`<div><div style="font-family:var(--mono);font-size:10px;color:${arm.color};margin-bottom:4px">${arm.id==='L'||arm.id==='A1'?'left':'right'}_arm · ${arm.id}</div>`;
+    j.forEach((v,i)=>{ const deg=i<5? v*57.2958 : v*100; const pct=i<5? clamp(deg/180,-1,1) : (v*2-1); const left=pct<0?50+pct*50:50, wd=Math.abs(pct)*50;
+      html+=`<div class="joint"><span>${JN[i]}</span><div class="bar ${i===5?'g':''}"><i style="left:${left}%;width:${wd}%"></i></div><span style="text-align:right">${deg.toFixed(0)}${i<5?'°':'%'}</span></div>`; });
+    html+='</div>'; });
+  box.innerHTML=html;
+}
+const cvz=document.getElementById('chunkviz'), czx=cvz.getContext('2d');
+function drawChunkViz(){
+  const w=cvz.clientWidth, h=60; if(cvz.width!==w) cvz.width=w; cvz.height=h; czx.fillStyle='#0b0f17'; czx.fillRect(0,0,w,h);
+  const arm=world.arms[0]; if(!arm) return; const n=policy.chunk; const d={x:arm.tgt.x-arm.cur.x,y:arm.tgt.y-arm.cur.y,z:arm.tgt.z-arm.cur.z};
+  czx.strokeStyle='#223047'; czx.beginPath(); czx.moveTo(0,h/2); czx.lineTo(w,h/2); czx.stroke();
+  const series=[['#4fd1c5',d.x],['#f6ad55',d.y],['#f56565',d.z]];
+  series.forEach(([col,amp],si)=>{ czx.strokeStyle=col; czx.lineWidth=1.3; czx.beginPath(); for(let i=0;i<n;i++){ const u=i/(n-1); const v=amp/400*Math.sin(u*Math.PI)*(1-u*0.3)+Math.sin(sim.t*3+i*0.2+si)*0.03; const x=u*w, y=h/2-v*h/2; i?czx.lineTo(x,y):czx.moveTo(x,y);} czx.stroke(); });
+  // executed steps marker
+  const exec=Math.min(n, Math.round((sim.frames%n))); czx.fillStyle='rgba(255,255,255,.08)'; czx.fillRect(0,0,exec/n*w,h);
+  czx.fillStyle='#8a98b3'; czx.font='9px monospace'; czx.fillText(`action chunk · ${n} steps · Δx Δy Δz · executing ${exec}/${n}`,6,10);
+}
+function drawScore(){
+  const R=sim.round; const box=document.getElementById('scoreBox'); document.getElementById('roundTag').textContent=R?R.key.toUpperCase():'—';
+  if(!R){ box.innerHTML=''; return; }
+  let rows=[];
+  const row=(k,v,cls='')=>rows.push(`<div class="k">${k}</div><div class="v ${cls}">${v}</div>`);
+  if(R.game===1){ row('correct placements', `+${R.score.correct}`,'good'); row('wrong bin penalties', `−${R.score.wrong}`,'bad'); row('completion bonus', `+${R.score.bonus}`); row('placed', `${R.placed}/32`);
+    row('round score', R.score.final!=null?R.score.final:Math.max(0,R.score.correct-R.score.wrong),'big');
+    row('R1 / R2 / R3', `${results.g1r1??'–'} / ${results.g1r2??'–'} / ${results.g1r3??'–'}`); if(results.g1r1!=null&&results.g1r2!=null&&results.g1r3!=null) row('Game 1 average', ((results.g1r1+results.g1r2+results.g1r3)/3).toFixed(1),'good'); }
+  else if(R.key==='g2r1'){ const ib=world.grains.filter(g=>g.st===1).length*0.5, sp=world.grains.filter(g=>g.st===2).length*0.5; row('rice in bowl', `${ib.toFixed(0)} g / 125 g`, ib>=120?'good':''); row('spilled', `${sp.toFixed(0)} g`, sp>10?'bad':'good'); row('two‑arm (C)', '10'); if(R.score.parts){ const p=R.score.parts; row('A transfer / B spill', `${p.A} / ${p.B}`); row('D time bonus', `+${p.D}`); } row('round score', R.score.final??'…','big'); }
+  else if(R.key==='g2r2'){ row('cloths folded (2 stages)', `${world.cloths.filter(c=>c.stage===2).length} × 15`); row('alignment pts', R.score.align.join(' + ')||'–'); row('in target zone', `${world.cloths.filter(c=>c.placed).length} × 5`); row('two‑arm (D)', '5'); row('round score', R.score.final??'…','big'); }
+  else if(R.key==='g2r3'){ row('wrap coverage', R.score.cover?`${(R.score.cover*100).toFixed(0)}%`:'…', R.score.cover>=0.7?'good':''); row('in box', world.mascot&&world.mascot.inBox?(world.mascot.inBox>=1?'fully':'partially'):'…'); row('flaps closed', `${(world.box?world.box.flaps*100:0).toFixed(0)}%`); if(R.score.parts){const p=R.score.parts; row('A/B/C/D/E/F', `${p.A}/${p.B}/${p.C}/${p.D}/${p.E}/${p.F}`);} row('round score', R.score.final??'…','big'); }
+  else if(R.key==='final'&&world.duel){ const T=world.duel; row('Team A tower', `${T.A.blocks.length} blocks · ${T.A.cmds} cmds · −${T.A.pen}`, ''); row('Team B tower', `${T.B.blocks.length} blocks · ${T.B.cmds} cmds · −${T.B.pen}`, ''); row('red thrown A / B', `${T.A.thrown} / ${T.B.thrown}`); row('collapses A / B', `${T.A.collapses} / ${T.B.collapses}`); if(results.final&&R.finished) row('winner', results.final,'big'); }
+  rows.push(`<div class="k" style="margin-top:6px">Game 2 so far</div><div class="v" style="margin-top:6px">${results.g2r1??'–'} / ${results.g2r2??'–'} / ${results.g2r3??'–'}</div>`);
+  box.innerHTML=rows.join('');
+  document.getElementById('dsTag').textContent=`episodes ${sim.episodes} · frames ${sim.frames} · success ${sim.attempts?Math.round(100*sim.successes/sim.attempts):0}%`;
+  document.getElementById('polMeta').innerHTML=`<span class="n">${policy.meta}</span><br>inference ≈ ${(policy.latency*1000).toFixed(0)} ms · placement accuracy prior ${(policy.acc*100).toFixed(0)}% · ${policy.note}<br>features: observation.images.top [3,480,640] · observation.images.side [3,480,640] · observation.state [12] · action [12] · fps 30`;
+}
+function renderPolicies(){ const box=document.getElementById('policyBox'); box.innerHTML=Object.entries(POLICIES).map(([k,p])=>`<div class="pol ${p===policy?'on':''}" data-p="${k}"><b>${p.name}</b><span>chunk ${p.chunk} · ${(p.latency*1000)|0} ms${p.lang?' · lang':''}</span></div>`).join('');
+  box.querySelectorAll('.pol').forEach(el=>el.onclick=()=>{ policy=POLICIES[el.dataset.p]; renderPolicies(); log(`<span class="sys">policy switched → ${policy.name}</span>`,'sys'); }); }
+renderPolicies();
+
+// ---------- main loop ----------
+let last=performance.now(), uiTick=0;
+function frame(now){
+  const real=Math.min(0.05,(now-last)/1000); last=now;
+  if(sim.playing){ const dt=real*sim.speed; const sub=Math.max(1,Math.ceil(dt/0.02)); const h=dt/sub;
+    for(let i=0;i<sub;i++){ sim.t+=h; for(const a of world.arms) a.update(h); updateGrains(h); runAll(); }
+    sim.frames+=Math.round(dt*sim.fps); }
+  // draw
+  drawWorkspace();
+  if(world.duel) drawDuel();
+  drawBins();
+  for(const o of world.objects) if(!o.held) drawObject(o);
+  drawCloths(); drawWrap(); drawCupBowl();
+  for(const a of world.arms) drawArm(a);
+  for(const o of world.objects) if(o.held) drawObject(o);
+  drawSideView(); drawHUD();
+  if((uiTick++)%3===0){ drawCams(); drawJoints(); drawChunkViz(); drawScore(); }
+  requestAnimationFrame(frame);
+}
+
+// ---------- controls ----------
+const $=(id)=>document.getElementById(id);
+$('play').onclick=()=>{ sim.playing=!sim.playing; $('play').textContent=sim.playing?'⏸ Pause':'▶ Play'; $('play').classList.toggle('on',sim.playing); };
+$('reset').onclick=()=>{ sim.estop=false; $('estop').textContent='⬤ E‑STOP'; startRound(sim.round?sim.round.key:'g1r1'); };
+$('estop').onclick=()=>{ sim.estop=!sim.estop; $('estop').textContent=sim.estop?'⬤ E‑STOP ENGAGED (reset to clear)':'⬤ E‑STOP';
+  if(sim.estop){ log('<span class="bad">⬤ EMERGENCY STOP — all arm motion halted (§5.7.2). Scored run is void; reset the round to continue.</span>','bad'); world.notes.push({x:850,y:640,txt:'⬤ E‑STOP ENGAGED',t:sim.t,life:999}); } };
+$('auto').onclick=()=>{ sim.auto=!sim.auto; $('auto').classList.toggle('on',sim.auto); };
+$('speed').oninput=(e)=>{ sim.speed=+e.target.value; $('speedv').textContent=sim.speed.toFixed(2).replace(/\.?0+$/,'')+'×'; };
+$('tgJudge').onclick=()=>{ sim.flags.judge=!sim.flags.judge; $('tgJudge').classList.toggle('on',sim.flags.judge); };
+$('tgChunk').onclick=()=>{ sim.flags.chunk=!sim.flags.chunk; $('tgChunk').classList.toggle('on',sim.flags.chunk); };
+$('tgReach').onclick=()=>{ sim.flags.reach=!sim.flags.reach; $('tgReach').classList.toggle('on',sim.flags.reach); };
+$('tgCam').onclick=()=>{ sim.flags.cam=!sim.flags.cam; $('tgCam').classList.toggle('on',sim.flags.cam); };
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>startRound(b.dataset.r));
+window.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if(e.code==='Space'){e.preventDefault(); $('play').click();} if(e.key>='1'&&e.key<='7') startRound(ORDER[+e.key-1]); if(e.key==='n'||e.key==='N') nextRound(); });
+
+// ---------- go ----------
+log('<span class="sys">IEEE Robot Arm AI Challenge simulator ready · rules V0.6 §5.8 · press 1‑7 or use the toolbar</span>','sys');
+startRound('g1r1');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
