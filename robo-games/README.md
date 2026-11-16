@@ -2,7 +2,9 @@
 
 Real-time, browser-only simulation of the IEEE Global Robot Championships Malta 2026 **Arena 4 Games** category (rulebook V0.6, section 4), played by a Team Genesis robot against a simulated opponent on the 6 x 6 m plywood arena with the 4 x 4 m sticker.
 
-**Run it:** download `index.html` and open it in any browser. No server or install needed.
+**Run it online:** https://claude.ai/artifact/1ausj2KtMiUPyJk2ZwApYc
+
+**Or locally:** download `index.html` and open it in any browser. No server or install needed. (GitHub shows HTML files as code, so it cannot run the page itself.)
 
 ## Games
 

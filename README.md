@@ -8,6 +8,11 @@ Team Genesis, University of Malta. This repository holds everything we are build
 | [`robo-arms/`](robo-arms/) | Real-time simulator of the Robot Arm AI Challenge: two SO-101-style arms through every round, scored live, with a LeRobot-style observation and policy panel | Section 5.8 | open `robo-arms/index.html` |
 | [`robo-games/`](robo-games/) | Real-time simulator of the Arena 4 Games we compete in: Time of Fall, Climate CHAOS, Weight in Line and Hanging Hazard, with a robot design panel, compliance checks and the MII layer as driver assist | Section 4 | open `robo-games/index.html` |
 
+**Run online (no download):**
+
+- Robo arms: https://claude.ai/artifact/EbszmDB3qzK2uCmCrVV2Wo
+- Robo games: https://claude.ai/artifact/1ausj2KtMiUPyJk2ZwApYc
+
 All three demos are single `index.html` files with no dependencies: download the file and open it in any browser, no server or install needed. GitHub shows HTML files as code, so it cannot run the pages itself; use the download icon on the file view, or enable GitHub Pages (below).
 
 Each folder has its own README with full details. What follows is a summary of all three.

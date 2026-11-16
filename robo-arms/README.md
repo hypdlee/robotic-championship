@@ -2,7 +2,9 @@
 
 Real-time, browser-only simulation of the IEEE Global Robot Championships Malta 2026 **Robot Arm AI Challenge** (rulebook V0.6, section 5.8). Two SO-101-style arms play every round, scored live against the published tables, with a LeRobot-style panel (observation cameras, joint state, action chunks, policy choice, episode log).
 
-**Run it:** download `index.html` and open it in any browser. No server or install needed.
+**Run it online:** https://claude.ai/artifact/EbszmDB3qzK2uCmCrVV2Wo
+
+**Or locally:** download `index.html` and open it in any browser. No server or install needed. (GitHub shows HTML files as code, so it cannot run the page itself.)
 
 ## What it covers
 
