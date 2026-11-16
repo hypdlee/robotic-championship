@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>IEEE Arena 4 Games 2026 — Team Genesis live simulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{--bg:#0b0f17;--panel:#121826;--panel2:#0f1420;--line:#223047;--txt:#dbe4f3;--mut:#8a98b3;--acc:#4fd1c5;--acc2:#f6ad55;--red:#f05252;--blue:#3b82f6;--green:#34c26b;--yellow:#f2c53d;
+    --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;--sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);height:100%}
+  header{display:flex;align-items:center;gap:16px;padding:10px 16px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#0f1626,#0b0f17)}
+  header h1{font-size:15px;margin:0;font-weight:600} header h1 span{color:var(--acc)} header .sub{font-size:12px;color:var(--mut)}
+  .wrap{display:grid;grid-template-columns:1fr 390px;gap:10px;padding:10px;height:calc(100% - 52px)}
+  .left{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px}
+  .toolbar .grp{display:flex;gap:4px;align-items:center;padding:3px 6px;border-right:1px solid var(--line)} .toolbar .grp:last-child{border-right:none}
+  .toolbar label{font-size:11px;color:var(--mut);margin-right:2px}
+  button{background:#1b2436;color:var(--txt);border:1px solid #2a3850;border-radius:7px;padding:5px 9px;font-size:12px;cursor:pointer;font-family:var(--sans)}
+  button:hover{border-color:var(--acc);color:#fff} button.on{background:var(--acc);color:#04221f;border-color:var(--acc);font-weight:600} button.warn.on{background:var(--acc2);border-color:var(--acc2);color:#2a1700}
+  input[type=range]{background:#1b2436;border:1px solid #2a3850;border-radius:7px;padding:0;height:18px}
+  .stage{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:1;min-height:0} canvas#main{display:block;width:100%;height:100%}
+  .right{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .card h3{margin:0 0 8px 0;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);display:flex;justify-content:space-between;align-items:center}
+  .card h3 .tag{font-family:var(--mono);font-size:10px;color:var(--acc);background:#0d2b28;border:1px solid #1b4b46;border-radius:5px;padding:1px 6px;text-transform:none;letter-spacing:0}
+  .score{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:12px} .score .k{color:var(--mut)} .score .v{font-family:var(--mono);text-align:right}
+  .score .v.good{color:var(--green)} .score .v.bad{color:var(--red)} .score .v.big{font-size:20px;color:var(--acc)}
+  .design{display:grid;grid-template-columns:110px 1fr 46px;gap:5px 8px;align-items:center;font-size:11px;color:var(--mut)} .design .v{font-family:var(--mono);color:var(--txt);text-align:right}
+  .chk{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:11.5px;margin-top:6px} .chk .ok{color:var(--green)} .chk .bad{color:var(--red)} .chk .ref{color:var(--mut);font-family:var(--mono);font-size:10px}
+  .log{font-family:var(--mono);font-size:10.5px;line-height:1.45;max-height:170px;overflow:auto;color:#aab7cf} .log .ok{color:var(--green)} .log .bad{color:var(--red)} .log .ev{color:var(--acc2)} .log .sys{color:var(--acc)}
+  .insight{font-size:12px;line-height:1.5;color:#c9d4e6} .insight b{color:var(--acc)}
+  .assist{font-family:var(--mono);font-size:10.5px;line-height:1.5} .assist .t0{color:#8a98b3}.assist .t1{color:#34c26b}.assist .t2{color:#f2c53d}.assist .t3{color:#f6ad55}.assist .t4{color:#f05252;font-weight:700}
+  .bracket{font-family:var(--mono);font-size:10.5px;line-height:1.6} .bracket .cur{color:var(--acc)} .bracket .won{color:var(--green)} .bracket .lost{color:var(--red)}
+  .kbd{font-family:var(--mono);background:#1b2436;border:1px solid #2a3850;border-radius:4px;padding:0 5px;font-size:10px} footer{font-size:10.5px;color:var(--mut);padding:0 4px}
+  .addon{display:inline-block;margin:2px 4px 2px 0}
+  @media (max-width:1100px){.wrap{grid-template-columns:1fr}.right{max-height:50vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>IEEE Global Robot Championships Malta 2026 · <span>Arena 4 Games</span> — Team Genesis live simulator</h1>
+  <div class="sub">Rulebook V0.6 §4 · 6 × 6 m plywood arena, 4 × 4 m sticker · Featherweight ≤ 20 kg · radio‑controlled with driver assist (§4.1.8)</div>
+</header>
+<div class="wrap">
+  <div class="left">
+    <div class="toolbar">
+      <div class="grp">
+        <button id="play" class="on">⏸ Pause</button>
+        <button id="kill" title="§4.4.2.2 kill switch: fully deactivates drive, add‑ons and comms" style="background:#7f1d1d;border-color:#b91c1c;color:#fff;font-weight:700">⬤ KILL SWITCH</button>
+        <button id="reset">↺ Restart game</button>
+        <button id="auto" class="on warn">Autoplay</button>
+      </div>
+      <div class="grp"><label>Game</label>
+        <button data-g="tof">1 Time of Fall</button><button data-g="chaos">2 Climate CHAOS</button><button data-g="wil">3 Weight in Line</button><button data-g="hh">4 Hanging Hazard</button>
+      </div>
+      <div class="grp"><label>Speed</label><input id="speed" type="range" min="0.25" max="6" step="0.25" value="1.5" style="width:90px"><span id="speedv" style="font-family:var(--mono);font-size:11px;width:34px">1.5×</span></div>
+      <div class="grp">
+        <button id="tgAssist" class="on">MII driver assist</button>
+        <button id="tgFpv" class="on">FPV overlay</button>
+        <button id="tgOpp" title="Opponent skill">Opp: even</button>
+      </div>
+    </div>
+    <div class="stage"><canvas id="main"></canvas></div>
+    <footer>Top view. Sticker 4 × 4 m (§1.2.2); the map for Climate CHAOS is randomised every run because the real one is only revealed on the day (§4.10 "Map"). Keys: <span class="kbd">Space</span> pause · <span class="kbd">1‑4</span> games · <span class="kbd">N</span> next · <span class="kbd">K</span> kill switch.</footer>
+  </div>
+  <div class="right">
+    <div class="card"><h3>Match <span class="tag" id="gameTag">—</span></h3><div class="score" id="scoreBox"></div></div>
+    <div class="card"><h3>Championship path <span class="tag">§4.8 structure</span></h3><div class="bracket" id="bracketBox"></div></div>
+    <div class="card"><h3>Genesis robot design <span class="tag">§4.3 / §4.4</span></h3>
+      <div class="design" id="designBox"></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--mut)">Add‑ons:
+        <label class="addon"><input type="checkbox" id="adSpindle" checked> spindle lifter (28 mm ring hole)</label>
+        <label class="addon"><input type="checkbox" id="adIntake" checked> ball intake</label>
+        <label class="addon"><input type="checkbox" id="adWedge" checked> wedge / tow bar</label>
+        <label class="addon"><input type="checkbox" id="adLidar" checked> front LiDAR + depth cam</label></div>
+      <div class="chk" id="chkBox"></div></div>
+    <div class="card"><h3>MII driver assist <span class="tag">observation → danger tier</span></h3><div class="assist" id="assistBox"></div></div>
+    <div class="card"><h3>Insight <span class="tag">how to win this game</span></h3><div class="insight" id="insightBox"></div></div>
+    <div class="card"><h3>Match log <span class="tag" id="logTag">judge feed</span></h3><div class="log" id="logBox"></div></div>
+  </div>
+</div>
+<script>
+'use strict';
+/* IEEE Arena 4 Games simulator. All limits, points and end conditions are transcribed from Rules & Regulations V0.6 §4. */
+const ARENA=6000, STK=4000, S0=(ARENA-STK)/2, S1=S0+STK;   // sticker spans 1000..5000 mm
+const G=9.81;
+const C={red:'#f05252',blue:'#3b82f6',green:'#34c26b',yellow:'#f2c53d',gen:'#4fd1c5',opp:'#f6ad55',wood:'#c9a46d',wood2:'#b48f58',sticker:'#e8e6e0',pit:'#0a0d14',flood:'#2b6cb0',sink:'#1a1a1a',fire:'#f56a2b'};
+const rnd=(a,b)=>a+Math.random()*(b-a), gauss=(s=1)=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)*s;};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), hyp=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y), pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=s=>{s=Math.max(0,s);return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;};
+
+// ---------- design (Genesis) ----------
+const design={mass:18.5, mu:0.9, power:260, width:600, length:650, height:480, volt:24, towPoint:11, spindle:true, intake:true, wedge:true, lidar:true};
+const oppLevels=[{n:'weak',k:0.75},{n:'even',k:1.0},{n:'strong',k:1.15}]; let oppLvl=1;
+function oppDesign(){ const k=oppLevels[oppLvl].k; return {mass:19.5, mu:0.8*k, power:230*k, width:650, length:650, height:450, spindle:true, intake:true, wedge:true, skill:0.75*k}; }
+
+const sim={t:0,speed:1.5,playing:true,auto:true,game:null,runners:[],flags:{assist:true,fpv:true},killed:false,log:[],frames:0};
+const results={tof:null,chaos:null,wil:null,hh:null};
+function log(msg,cls=''){ sim.log.push({t:sim.t,msg,cls}); if(sim.log.length>200) sim.log.shift(); const el=document.getElementById('logBox'); el.innerHTML=sim.log.slice(-70).map(l=>`<div class="${l.cls}"><span style="color:#5a6b88">${fmt(l.t)}</span> ${l.msg}</div>`).join(''); el.scrollTop=el.scrollHeight; }
+
+// ---------- robots ----------
+class Robot{
+  constructor(id,color,d,x,y,th){ this.id=id; this.color=color; this.d=d; this.x=x; this.y=y; this.th=th; this.vx=0; this.vy=0; this.held=null; this.carry=[]; this.immobile=false; this.flipped=false; this.pinnedUntil=0; this.pinning=null;
+    this.ctrl={fx:0,fy:0}; this.mass=d.mass; this.r=Math.max(d.width,d.length)/2*0.95; this.slip=0; this.damage=0; this.fell=false; this.target=null; this.assistTier=0; this.assistMsg='IDLE'; this.done=false; this.lockT=0; }
+  get totalMass(){ return this.mass+(this.held?this.held.kg:0)+this.carry.reduce((a,c)=>a+(c.kg||0),0); }
+  traction(){ return this.d.mu*this.totalMass*G; }               // N, max ground force before wheel slip
+  maxForce(){ return Math.min(this.d.power, this.traction()); }
+  vmax(){ return 1400*Math.sqrt(this.d.power/250)*(this.held?0.8:1); }
+  step(dt){
+    if(this.manual) return;              // Time of Fall integrates the chained pair itself
+    if(this.immobile||this.flipped||sim.killed&&this.id==='GEN'){ this.vx*=0.6; this.vy*=0.6; this.x+=this.vx*dt; this.y+=this.vy*dt; return; }
+    const m=this.totalMass; const F=this.maxForce(); const n=Math.hypot(this.ctrl.fx,this.ctrl.fy)||1;
+    // desired velocity direction × throttle
+    const tx=this.ctrl.fx/n*this.vmax()*Math.min(1,n), ty=this.ctrl.fy/n*this.vmax()*Math.min(1,n);
+    const a=F/m*1000; // mm/s²
+    const dvx=tx-this.vx, dvy=ty-this.vy, dn=Math.hypot(dvx,dvy)||1; const st=Math.min(dn,a*dt);
+    this.vx+=dvx/dn*st; this.vy+=dvy/dn*st;
+    // wheel slip noise when demanding near traction limit
+    const demand=Math.min(1,n)*this.d.power/this.traction(); this.slip=clamp(demand-0.85,0,1);
+    this.vx+=gauss(this.slip*120*dt); this.vy+=gauss(this.slip*120*dt);
+    if(sim.t<this.pinnedUntil){ this.vx*=0.2; this.vy*=0.2; }
+    this.x+=this.vx*dt; this.y+=this.vy*dt;
+    if(Math.hypot(this.vx,this.vy)>40) this.th=Math.atan2(this.vy,this.vx);
+  }
+  driveTo(p,throttle=1){ const dx=p.x-this.x, dy=p.y-this.y, d=Math.hypot(dx,dy)||1; const t=Math.min(throttle, d/250); this.ctrl={fx:dx/d*t, fy:dy/d*t}; return d; }
+  stop(){ this.ctrl={fx:0,fy:0}; }
+}
+function* goTo(r,p,tol=60,throttle=1){ while(true){ const d=r.driveTo(p,throttle); if(d<tol){ r.stop(); return true; } if(r.immobile||r.flipped||r.fell) return false; yield; } }
+function* wait(s){ const t0=sim.t; while(sim.t-t0<s) yield; }
+function runAll(){ for(const r of sim.runners){ if(!r.done){ if(r.gen.next().done) r.done=true; } } sim.runners=sim.runners.filter(r=>!r.done); }
+function spawn(g){ sim.runners.push({gen:g,done:false}); }
+
+// robot-robot contact: pushing contest resolved by drive force and mass
+function contact(a,b,dt){
+  const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1, minD=a.r+b.r; if(d>=minD) return false;
+  const nx=dx/d, ny=dy/d, pen=minD-d;
+  const ma=a.totalMass, mb=b.totalMass; a.x-=nx*pen*mb/(ma+mb); a.y-=ny*pen*mb/(ma+mb); b.x+=nx*pen*ma/(ma+mb); b.y+=ny*pen*ma/(ma+mb);
+  // push force along normal: each robot's drive projected on the normal, limited by traction
+  const fa=(a.ctrl.fx*nx+a.ctrl.fy*ny)*a.maxForce(), fb=-(b.ctrl.fx*nx+b.ctrl.fy*ny)*b.maxForce();
+  const net=fa-fb; // >0: a pushes b
+  const acc=net/(ma+mb)*1000*dt*0.9;
+  a.vx=a.vx*0.5+nx*acc; a.vy=a.vy*0.5+ny*acc; b.vx=b.vx*0.5+nx*acc; b.vy=b.vy*0.5+ny*acc;
+  return true;
+}
+const inRect=(p,r)=>p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h;
+function keepOnSticker(r,margin=0){ r.x=clamp(r.x,S0+r.r-margin,S1-r.r+margin); r.y=clamp(r.y,S0+r.r-margin,S1-r.r+margin); }
+
+// ---------- world ----------
+const world={robots:[],pits:[],pockets:[],weights:[],rings:[],balls:[],hazards:[],maze:null,towers:[],flood:[],sinks:[],cars:[],fire:null,safe:null,chain:null,notes:[],cards:[]};
+function resetWorld(){ for(const k in world){ world[k]=Array.isArray(world[k])?[]:null; } sim.t=0; sim.killed=false; document.getElementById('kill').textContent='⬤ KILL SWITCH'; }
+function makeRobots(gx,gy,ox,oy){ world.robots=[ new Robot('GEN',C.gen,design,gx,gy,0), new Robot('OPP',C.opp,oppDesign(),ox,oy,Math.PI) ]; return world.robots; }
+
+// =================== GAME 1 · TIME OF FALL (§4.9) ===================
+function* gameTOF(){
+  resetWorld();
+  const pit={x:S0+STK/2-250,y:S0,w:500,h:STK}; world.pits=[pit];    // central fall / pit strip, robots on each side
+  const [g,o]=makeRobots(S0+STK/2-1100,S0+STK/2, S0+STK/2+1100,S0+STK/2);
+  world.chain={len:2200-g.r-o.r}; g.manual=true; o.manual=true;
+  const M=sim.game={key:'tof',name:'Game 1 · Time of Fall',limit:60,finished:false,score:{winner:null,time:null,dist:null,how:null}};
+  const towOK=design.towPoint<=11 && design.towPoint>=8;
+  log(`<span class="sys">▶ Time of Fall</span> · chain with 11 mm connectors (gate 17 mm) · no add‑ons allowed (§4.9.5)`,'sys');
+  if(!towOK){ log('<span class="bad">tow point does not fit the connector → DISQUALIFIED for this game (§4.9.3)</span>','bad'); M.score.winner='OPP'; M.score.how='Genesis DQ (tow point)'; M.finished=true; results.tof={rank:'DQ'}; yield* wait(3); if(sim.auto) nextGame(); return; }
+  log(`Genesis traction ${g.traction().toFixed(0)} N (μ ${design.mu} × ${design.mass} kg) vs motor ${design.power} N → pulls with ${g.maxForce().toFixed(0)} N · opponent ${o.maxForce().toFixed(0)} N`,'');
+  const t0=sim.t;
+  // 1‑D tug: both pull away from the pit. Net force moves the pair toward the weaker side.
+  while(true){
+    g.ctrl={fx:-1,fy:0}; o.ctrl={fx:1,fy:0};
+    const Fg=g.maxForce()*(1+gauss(0.08)), Fo=o.maxForce()*(1+gauss(0.08)+(o.d.skill-0.85)*0.2);
+    const net=Fo-Fg;                 // >0 → Genesis dragged toward pit (+x)
+    const dt=0.02; const acc=net/(g.totalMass+o.totalMass)*1000;
+    g.vx+=acc*dt; g.vx*=0.93; o.vx=g.vx; g.x+=g.vx*dt; o.x=g.x+world.chain.len+g.r+o.r; g.th=Math.PI; o.th=0;
+    g.slip=clamp(Fg/g.traction()-0.85,0,1); o.slip=clamp(Fo/o.traction()-0.85,0,1);
+    const gEdge=g.x+g.r*0.6, oEdge=o.x-o.r*0.6; // tow point ≈ front of chassis
+    if(gEdge>pit.x){ g.fell=true; M.score.winner='OPP'; M.score.how='Genesis pulled over the edge'; break; }
+    if(oEdge<pit.x+pit.w){ o.fell=true; M.score.winner='GEN'; M.score.how='Opponent pulled over the edge'; break; }
+    if(sim.t-t0>=M.limit){ const dg=pit.x-gEdge, dq=oEdge-(pit.x+pit.w); M.score.dist={gen:dg,opp:dq}; M.score.winner=dg>dq?'GEN':'OPP'; M.score.how=`timeout, distance from edge decides (§4.9.7): Genesis ${dg.toFixed(0)} mm vs opp ${dq.toFixed(0)} mm`; break; }
+    yield;
+  }
+  M.score.time=sim.t-t0; M.finished=true; g.stop(); o.stop();
+  const first=M.score.how.includes('edge') && !M.score.how.includes('timeout');
+  results.tof={win:M.score.winner==='GEN', time:M.score.time, first};
+  log(`<span class="sys">■ ${M.score.how} at ${fmt(M.score.time)} → ${M.score.winner==='GEN'?'<b class="ok">Genesis wins</b>':'<b class="bad">Genesis loses</b>'}${first?' (1st‑priority win ranks above any timeout win §4.9.7)':''}</span>`,'sys');
+  yield* wait(3); if(sim.auto) nextGame();
+}
+
+// =================== GAME 2 · CLIMATE CHAOS (§4.10) ===================
+const CELL=400, N=STK/CELL; // 10 × 10 maze cells of 400 mm
+function genMaze(){
+  const walls=[]; const vis=Array.from({length:N},()=>Array(N).fill(false)); const W=Array.from({length:N},()=>Array.from({length:N},()=>({r:true,d:true})));
+  const stack=[[0,N-1]]; vis[0][N-1]=true;
+  while(stack.length){ const [cx,cy]=stack[stack.length-1]; const nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy])=>[cx+dx,cy+dy,dx,dy]).filter(([x,y])=>x>=0&&y>=0&&x<N&&y<N&&!vis[x][y]);
+    if(!nb.length){ stack.pop(); continue; } const [nx,ny,dx,dy]=pick(nb); vis[nx][ny]=true; if(dx===1) W[cx][cy].r=false; if(dx===-1) W[nx][ny].r=false; if(dy===1) W[cx][cy].d=false; if(dy===-1) W[nx][ny].d=false; stack.push([nx,ny]); }
+  // open it up: remove ~45% of remaining walls so a city block feel emerges and 900 mm towers fit
+  for(let x=0;x<N;x++) for(let y=0;y<N;y++){ if(x<N-1&&W[x][y].r&&Math.random()<0.45) W[x][y].r=false; if(y<N-1&&W[x][y].d&&Math.random()<0.45) W[x][y].d=false; }
+  return W;
+}
+function passable(W,a,b){ const dx=b[0]-a[0], dy=b[1]-a[1]; if(dx===1) return !W[a[0]][a[1]].r; if(dx===-1) return !W[b[0]][b[1]].r; if(dy===1) return !W[a[0]][a[1]].d; if(dy===-1) return !W[b[0]][b[1]].d; return false; }
+function bfs(W,from,to,blocked){ const key=c=>c[0]+','+c[1]; const prev=new Map([[key(from),null]]); const q=[from];
+  while(q.length){ const c=q.shift(); if(c[0]===to[0]&&c[1]===to[1]) break; for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const n=[c[0]+dx,c[1]+dy]; if(n[0]<0||n[1]<0||n[0]>=N||n[1]>=N) continue; if(!passable(W,c,n)) continue; if(blocked.has(key(n))) continue; if(prev.has(key(n))) continue; prev.set(key(n),c); q.push(n); } }
+  if(!prev.has(key(to))) return null; const path=[]; let c=to; while(c){ path.unshift(c); c=prev.get(key(c)); } return path; }
+const cc=(c)=>({x:S0+(c[0]+0.5)*CELL, y:S0+(c[1]+0.5)*CELL});
+function* gameCHAOS(){
+  resetWorld();
+  let W, towerCells, tries=0;
+  const specs=[{n:'A',cols:5,pts:50,pen:25},{n:'B',cols:4,pts:100,pen:50},{n:'C',cols:3,pts:150,pen:100}];
+  world.safe={x:S0,y:S1-CELL*2,w:CELL*2,h:CELL*2};
+  do { // generate until every tower is reachable from the safe zone with flood/sinkholes/cars treated as walls
+    W=genMaze(); const taken=new Set(['0,9','1,9','0,8','1,8']);
+    const far=[[8,0],[9,1],[8,2],[5,0],[6,1],[9,4],[3,1],[2,2],[9,7],[6,5],[4,4],[7,8]];
+    towerCells=[]; while(towerCells.length<3){ const c=pick(far); const k=c[0]+','+c[1]; if(taken.has(k)) continue; if(towerCells.some(t=>Math.abs(t[0]-c[0])+Math.abs(t[1]-c[1])<3)) continue; taken.add(k); towerCells.push(c); }
+    const free=()=>{ let c; do{ c=[Math.floor(rnd(0,N)),Math.floor(rnd(0,N))]; }while(taken.has(c[0]+','+c[1])); taken.add(c[0]+','+c[1]); return c; };
+    world.flood=[free(),free(),free()].map(c=>({cell:c,...cc(c)})); world.sinks=[free(),free(),free()].map(c=>({cell:c,...cc(c)})); world.cars=[free(),free()].map(c=>({cell:c,...cc(c),th:rnd(0,Math.PI)}));
+    const blk=new Set([...world.sinks,...world.cars,...world.flood].map(s=>s.cell[0]+','+s.cell[1]));
+    if(towerCells.every(c=>bfs(W,[0,9],c,blk))) break;
+  } while(++tries<40);
+  world.maze=W;
+  world.towers=towerCells.map((c,i)=>({...specs[i], cell:c, ...cc(c), w:900, clear:600, collapsed:false, cutout:{name:i===0?'family':i===1?'cat & dog':'person', rescued:false, onRobot:false}, burnt:false}));
+  world.fire={x:S1, speed:0, front:S1+200};  // front moves from the right edge leftwards; intensity grows as towers are rescued (§4.10.28)
+  const [g]=makeRobots(S0+CELL,S1-CELL, -1000,-1000); world.robots=[g]; // solo run vs clock
+  const M=sim.game={key:'chaos',name:'Game 2 · Climate CHAOS',limit:300,finished:false,score:{pts:0,pen:0,rescued:0,collisions:0,washout:false,time:null,final:null}};
+  log(`<span class="sys">▶ Climate CHAOS</span> · map generated (revealed on the day) · towers A/B/C: 5/4/3 columns, 60 cm clearance, 900 mm wide · 5 min (§4.10.18)`,'sys');
+  if(design.height>600) log('<span class="bad">robot taller than 60 cm tower clearance → cannot drive under towers</span>','bad');
+  const t0=sim.t; const blocked=new Set([...world.sinks,...world.cars].map(s=>s.cell[0]+','+s.cell[1])); const floodSet=new Set(world.flood.map(f=>f.cell[0]+','+f.cell[1]));
+  const cellOf=(p)=>[clamp(Math.floor((p.x-S0)/CELL),0,N-1),clamp(Math.floor((p.y-S0)/CELL),0,N-1)];
+  function* driveCells(path){ for(let i=1;i<path.length;i++){ const c=path[i]; const p=cc(c); const nearTower=world.towers.find(t=>hyp(t,p)<CELL*1.2&&!t.collapsed);
+      const assist=sim.flags.assist&&design.lidar; const thr=nearTower?(assist?0.25:0.5):0.4;
+      g.assistTier=nearTower?(assist?2:3):1; g.assistMsg=nearTower?`tower ${nearTower.n} ${hyp(nearTower,g).toFixed(0)} mm · ${assist?'slowing, column envelope locked':'NO ASSIST — manual, high collision risk'}`:'corridor clear';
+      const ok=yield* goTo(g,p,70,thr); if(!ok) return false;
+      // washout check (§4.10.11)
+      const k=c[0]+','+c[1]; if(floodSet.has(k)){ M.score.washout=true; log('<span class="bad">WASHOUT — robot entered a flood area, game stops (§4.10.11)</span>','bad'); return false; }
+      // fire reached robot?
+      if(g.x>world.fire.front){ log('<span class="bad">forest fire front reached the robot — judges stop the run</span>','bad'); return false; }
+    } return true; }
+  spawn((function*(){ try { yield* mission(); } finally { g.done=true; } })());
+  function* mission(){
+    // visit towers by value/distance heuristic: nearest first, but C (150) if reachable before fire
+    let cur=cellOf(g); const order=[...world.towers].sort((a,b)=>hyp(a,g)-hyp(b,g));
+    for(const t of order){
+      if(t.burnt) { log(`tower ${t.n} already lost to the fire`,'ev'); continue; }
+      const path=bfs(W,cur,t.cell,new Set([...blocked,...floodSet])); if(!path){ log(`no safe path to tower ${t.n} (sinkholes/flood block it) — skipping`,'ev'); continue; }
+      const ok=yield* driveCells(path); if(!ok) return;
+      // pass under the tower: collision roll depends on robot width vs 900 mm span with (cols) columns, speed, assist
+      const gap=(t.w)/(t.cols-1); const margin=gap-design.width; const assist=sim.flags.assist&&design.lidar;
+      let pHit = margin<0 ? 0.95 : clamp(0.35-margin/600,0.03,0.4); if(assist) pHit*=0.3; if(design.height>t.clear) pHit=1;
+      yield* wait(2.5);   // align, drive under, lift the cutout
+      if(Math.random()<pHit){ M.score.collisions++; const collapse=Math.random()<0.6; log(`<span class="bad">contact with tower ${t.n} column (gap ${gap.toFixed(0)} mm vs robot ${design.width} mm)${collapse?' → TOWER COLLAPSED −'+t.pen:' → −10 obstacle hit'}</span>`,'bad'); if(collapse){ t.collapsed=true; M.score.pen+=t.pen; world.notes.push({x:t.x,y:t.y-80,txt:'COLLAPSE −'+t.pen,t:sim.t}); } else M.score.pen+=10; }
+      if(!t.collapsed){ t.cutout.onRobot=true; g.carry.push({kg:0.4,name:t.cutout.name}); log(`cutout "${t.cutout.name}" lifted from under tower ${t.n} (+${t.pts} when inside the safe zone)`,''); }
+      else log(`tower ${t.n} collapsed — cutout cannot be scored`,'');
+      cur=t.cell; world.fire.speed+=90; // intensity escalates toward the final tower (§4.10.28)
+    }
+    const back=bfs(W,cur,[0,9],new Set([...blocked,...floodSet])); if(back){ g.assistMsg='returning to SAFE ZONE'; const ok=yield* driveCells(back); if(!ok) return; }
+    for(const t of world.towers){ if(t.cutout.onRobot&&inRect(g,world.safe)){ t.cutout.rescued=true; M.score.pts+=t.pts; M.score.rescued++; log(`<span class="ok">"${t.cutout.name}" rescued — entire object inside safe zone (§4.10.6) +${t.pts}</span>`,'ok'); } }
+    M.score.time=sim.t-t0;
+  }
+  while(!g.done){ world.fire.front-=world.fire.speed*0.02*(sim.speed>0?1:0)/Math.max(1,sim.speed)*sim.speed; // advance per tick (sim seconds)
+    for(const t of world.towers) if(!t.burnt&&t.x+450>world.fire.front){ t.burnt=true; log(`<span class="ev">🔥 fire reached tower ${t.n}${t.cutout.onRobot||t.cutout.rescued?'':' — its cutout is lost'}</span>`,'ev'); }
+    if(M.score.washout) break; if(sim.t-t0>=M.limit){ log('5 minutes elapsed (§4.10.18)','ev'); break; } if(g.immobile) break; yield; }
+  M.score.time=M.score.time??(sim.t-t0); M.score.final=M.score.pts-M.score.pen; M.finished=true; results.chaos={pts:M.score.final,time:M.score.time,washout:M.score.washout};
+  log(`<span class="sys">■ Climate CHAOS: ${M.score.rescued}/3 rescued · +${M.score.pts} − ${M.score.pen} = <b>${M.score.final}</b> in ${fmt(M.score.time)}${M.score.washout?' · WASHOUT (ranks below equal scores §4.10.12)':''}</span>`,'sys');
+  yield* wait(3); if(sim.auto) nextGame();
+}
+
+// =================== GAME 3 · WEIGHT IN LINE (§4.11) ===================
+const WSPEC=[{kg:0.5,d:100,h:13,pts:5},{kg:1,d:140,h:13,pts:10},{kg:2,d:176,h:18,pts:15},{kg:5,d:235,h:25,pts:20},{kg:5,d:235,h:25,pts:20},{kg:10,d:300,h:30,pts:30}];
+function* gameWIL(){
+  resetWorld();
+  const pitR={x:S0,y:S0,w:700,h:700}, pitB={x:S1-700,y:S1-700,w:700,h:700}; world.pits=[{...pitR,color:'red'},{...pitB,color:'blue'}];
+  // rings (designated locations) laid out in a line beside each corner (§4.11.1)
+  world.rings=[]; WSPEC.forEach((w,i)=>{ world.rings.push({color:'blue',x:S1-250-i*330,y:S1-950,d:w.d+60,i}); world.rings.push({color:'red',x:S0+250+i*330,y:S0+950,d:w.d+60,i}); });
+  world.weights=[]; WSPEC.forEach((w,i)=>{ world.weights.push({...w,i,color:'blue',x:S0+STK/2+gauss(500),y:S0+STK/2+gauss(500),placed:null,held:null}); world.weights.push({...w,i,color:'red',x:S0+STK/2+gauss(500),y:S0+STK/2+gauss(500),placed:null,held:null}); });
+  world.weights.forEach(w=>{ w.x=clamp(w.x,S0+900,S1-900); w.y=clamp(w.y,S0+900,S1-900); });
+  const [g,o]=makeRobots(S1-700,S1-700, S0+700,S0+700); g.side='blue'; o.side='red';
+  const M=sim.game={key:'wil',name:'Game 3 · Weight in Line',limit:300,finished:false,score:{gen:0,opp:0,cards:{gen:[],opp:[]},ended:null}};
+  log(`<span class="sys">▶ Weight in Line</span> · Genesis = BLUE corner · 6 weights per colour (5+10+15+20+20+30 = 100) · active add‑ons only on weights (§4.11.5) · 5 min`,'sys');
+  if(!design.spindle) log('<span class="ev">no spindle lifter: weights will be pushed, placement accuracy drops</span>','ev');
+  const t0=sim.t; const scoreOf=r=>r.id==='GEN'?M.score.gen:M.score.opp; const addScore=(r,v)=>{ if(r.id==='GEN') M.score.gen+=v; else M.score.opp+=v; };
+  const myPit=r=>r.side==='blue'?pitB:pitR, oppPit=r=>r.side==='blue'?pitR:pitB;
+  function tier(err,ring){ const inner=ring.d/2-WSPEC[ring.i].d/2; if(err<=inner*0.6) return 1; if(err<=inner) return .75; if(err<=inner+WSPEC[ring.i].d*0.5) return .5; return 0; }
+  function* player(r, hasSpindle, skill){
+    const mine=()=>world.weights.filter(w=>w.color===r.side&&!w.placed&&!w.held);
+    while(mine().length){
+      const w=mine().sort((a,b)=>(b.pts/ (hyp(a,r)+1))-(a.pts/(hyp(b,r)+1)))[0]; // value per distance
+      r.assistTier=1; r.assistMsg=`target ${w.kg} kg ${w.color} weight (${w.pts} pts) ${hyp(w,r).toFixed(0)} mm`;
+      const ok=yield* goTo(r,w,r.r*0.5+w.d/2,1); if(!ok) return;
+      if(w.held||w.placed) continue; w.held=r; r.held=w; yield* wait(hasSpindle?1.6:0.6); // spindle engages the 28 mm hole
+      const ring=world.rings.find(q=>q.color===r.side&&q.i===w.i);
+      r.assistMsg=`carrying ${w.kg} kg → ring ${w.i+1} · traction margin ${(r.traction()-r.d.power).toFixed(0)} N`;
+      const ok2=yield* goTo(r,ring,r.r*0.5+w.d/2,0.9); if(!ok2){ w.held=null; r.held=null; return; }
+      yield* wait(hasSpindle?1.2:0.4);
+      const err=Math.abs(gauss((hasSpindle?35:110)*(1.2-skill))); w.x=ring.x+gauss(err*0.7); w.y=ring.y+gauss(err*0.7); w.held=null; r.held=null; w.placed=ring;
+      const f=tier(err,ring); const got=Math.round(w.pts*f); addScore(r,got);
+      log(`${r.id}: ${w.kg} kg ${w.color} weight placed, offset ${err.toFixed(0)} mm → ${f*100}% ${got>0?'<span class="ok">+'+got+'</span>':'<span class="bad">+0 (not touching inside §4.11.11)</span>'}`,'');
+    }
+    // all weights scored → may attempt to drop opponent into a pit (§4.11.7)
+    const opp=world.robots.find(x=>x!==r); r.assistTier=3; r.assistMsg='all weights scored → pushing phase (no active add‑ons on opponent §4.11.7)';
+    log(`${r.id} scored ALL weights → may now push ${opp.id} into a pit (own pit 100 / opp pit 50)`,'ev');
+    while(!M.finished){ const pit=myPit(r); const aim={x:pit.x+pit.w/2,y:pit.y+pit.h/2}; // get behind the opponent relative to own pit
+      const dx=opp.x-aim.x, dy=opp.y-aim.y, d=Math.hypot(dx,dy)||1; const behind={x:opp.x+dx/d*(r.r+opp.r+150), y:opp.y+dy/d*(r.r+opp.r+150)};
+      if(hyp(r,behind)>120) r.driveTo(behind,1); else r.driveTo(aim,1); yield; }
+  }
+  spawn(player(g,design.spindle,0.9)); spawn(player(o,o.d.spindle,o.d.skill));
+  // referee
+  spawn((function*(){ while(!M.finished){ yield* wait(rnd(70,150)); if(M.finished) break; const r=Math.random()<0.4?g:o; const sev=Math.random();
+      const cards=M.score.cards[r.id==='GEN'?'gen':'opp']; if(r.immobile||cards.includes('R')) continue; if(sev<0.08||cards.length>=2){ cards.push('R'); log(`<span class="bad">🟥 RED card ${r.id}: stops scoring, opponent +100 (§4.11.14)</span>`,'bad'); addScore(r===g?o:g,100); r.immobile=true; r.assistMsg='RED CARD — out'; }
+      else { cards.push('Y'); addScore(r,-10); log(`<span class="ev">🟨 YELLOW card ${r.id}: −10 (${r.id==='GEN'?'ramming with lifter raised':'rough play'})</span>`,'ev'); } } })());
+  while(!M.finished){
+    contact(g,o,0.02); for(const r of world.robots){ keepOnSticker(r); for(const p of world.pits){ if(inRect(r,p)&&!r.fell){ r.fell=true; r.immobile=true; const other=r===g?o:g; const own=p===myPit(r);
+        const otherDone=!world.weights.some(w=>w.color===other.side&&!w.placed);
+        if(hyp(r,other)<r.r+other.r+200 && !otherDone){ log(`<span class="bad">${other.id} pushed ${r.id} into a pit before scoring all weights → ${other.id} LOSES, ${r.id} +100 (§4.11.8)</span>`,'bad'); addScore(r,100); M.score.ended=`${other.id} illegal push`; }
+        else if(hyp(r,other)<r.r+other.r+200){ const v=own?50:100; addScore(other,v); log(`<span class="ok">${other.id} dropped ${r.id} into the ${own?r.side+' (own)':'opponent'} pit +${v} (§4.11.7)</span>`,'ok'); M.score.ended='pit drop'; }
+        else { const v=own?50:100; addScore(other,v); log(`${r.id} fell into a pit on its own → ${other.id} +${v} (§4.11.9)`,'ev'); M.score.ended='self fall'; }
+        M.finished=true; } } }
+    if(sim.t-t0>=M.limit){ M.finished=true; M.score.ended='5 min'; }
+    yield; }
+  const win=M.score.gen>M.score.opp?'GEN':M.score.gen<M.score.opp?'OPP':'tie';
+  results.wil={win:win==='GEN',pts:M.score.gen,opp:M.score.opp};
+  log(`<span class="sys">■ Weight in Line ends (${M.score.ended}): Genesis ${M.score.gen} vs ${M.score.opp} → ${win==='GEN'?'<b class="ok">Genesis wins</b>':win==='tie'?'tie → Round‑1 ranking breaks it (§4.8.5.5)':'<b class="bad">Genesis loses</b>'}</span>`,'sys');
+  yield* wait(3); if(sim.auto) nextGame();
+}
+
+// =================== GAME 4 · HANGING HAZARD (§4.12) ===================
+function* gameHH(){
+  resetWorld();
+  const pkR={x:S0,y:S0,w:600,h:600,color:'red'}, pkB={x:S1-600,y:S1-600,w:600,h:600,color:'blue'}; world.pockets=[pkR,pkB];
+  world.balls=[0,1,2].map(i=>({x:S0+STK/2+(i-1)*600+gauss(120),y:S0+STK/2+gauss(250),l:280,w:155,held:null,scored:null,rot:rnd(0,Math.PI)}));
+  // hanging weights: pendulums swinging across lanes, lowered close to the floor (§4.12.7)
+  world.hazards=[{cx:S0+STK/2,cy:S0+1000,amp:1100,per:3.2,ph:0,axis:'x'},{cx:S0+STK/2,cy:S1-1000,amp:1100,per:2.7,ph:1.3,axis:'x'},{cx:S0+1000,cy:S0+STK/2,amp:1000,per:3.8,ph:2.1,axis:'y'},{cx:S1-1000,cy:S0+STK/2,amp:1000,per:3.0,ph:0.6,axis:'y'}].map(h=>({...h,r:160,x:h.cx,y:h.cy}));
+  const [g,o]=makeRobots(S1-650,S1-650, S0+650,S0+650); g.side='blue'; o.side='red';
+  const M=sim.game={key:'hh',name:'Game 4 · Hanging Hazard',limit:480,finished:false,score:{gen:0,opp:0,ended:null,locks:{gen:0,opp:0}}};
+  log(`<span class="sys">▶ Hanging Hazard</span> · 3 Kipsta AF500 balls · score in the OPPONENT's pocket (§4.12.12) · all add‑ons allowed · 8 min · immobilise = win (§4.12.10)`,'sys');
+  const t0=sim.t; const oppPocket=r=>r.side==='blue'?pkR:pkB;
+  function* player(r,intake,skill){
+    const opp=world.robots.find(x=>x!==r);
+    while(!M.finished){
+      const free=world.balls.filter(b=>!b.held&&!b.scored);
+      if(r.held){ const pk=oppPocket(r); const aim={x:pk.x+pk.w/2,y:pk.y+pk.h/2}; r.assistMsg=`ball secured → ${pk.color} pocket ${hyp(r,aim).toFixed(0)} mm`; r.assistTier=hazardNear(r)?3:1;
+        const thr=(sim.flags.assist&&design.lidar&&r===g&&hazardNear(r))?0.35:1; const d=r.driveTo(aim,thr); if(d<r.r+150){ const b=r.held; b.scored=r.side; b.held=null; r.held=null; b.x=aim.x; b.y=aim.y; if(r===g) M.score.gen++; else M.score.opp++; log(`<span class="ok">${r.id} scores: ball in the ${pk.color} pocket (${r===g?M.score.gen:M.score.opp})</span>`,'ok'); } yield; continue; }
+      if(free.length){ const b=free.sort((a,c)=>hyp(a,r)-hyp(c,r))[0]; r.assistTier=hazardNear(r)?3:1; r.assistMsg=`chasing ball ${hyp(b,r).toFixed(0)} mm · hazard ${hazardNear(r)?'SWINGING THROUGH LANE':'clear'}`;
+        const thr=(sim.flags.assist&&design.lidar&&r===g&&hazardNear(r))?0.3:1; const d=r.driveTo(b,thr);
+        if(d<r.r+100 && !b.held){ if(intake||Math.random()<0.5){ b.held=r; r.held=b; log(`${r.id} intakes a ball`,''); } else { b.x+=gauss(200); b.y+=gauss(200); } }
+        yield; continue; }
+      // no balls left: hunt / pin the opponent (≤10 s lock, §4.12 note); after two locks, play defensively (repeated locking counts against you §4.12.14 note)
+      const myLocks=M.score.locks[r===g?'gen':'opp']; if(myLocks>=2){ r.assistTier=2; r.assistMsg='defending: keeping distance (lock count would weigh against us)'; const away={x:r.x+(r.x-opp.x),y:r.y+(r.y-opp.y)}; if(hyp(r,opp)<1400) r.driveTo(away,0.8); else r.stop(); yield; continue; }
+      r.assistTier=3; r.assistMsg='no balls left → contact play (lock ≤ 10 s)';
+      if(sim.t<(r.lockCool||0)){ const away={x:r.x-(opp.x-r.x),y:r.y-(opp.y-r.y)}; r.driveTo(away,0.6); yield; continue; }
+      const d=r.driveTo(opp,1); if(d<r.r+opp.r+10){ if(!r.pinning){ r.pinning=sim.t; } else if(sim.t-r.pinning>10){ r.pinning=null; M.score.locks[r===g?'gen':'opp']++; r.lockCool=sim.t+12; log(`<span class="ev">${r.id} held the lock 10 s → must release (§4.12 note); repeated locking counts against it</span>`,'ev'); } opp.pinnedUntil=sim.t+0.1; } else r.pinning=null;
+      yield; }
+  }
+  // threat = a hanging weight within 600 mm whose swing is closing on the robot (velocity vector pointing at it)
+  function hazardNear(r){ return world.hazards.some(h=>{ const d=hyp(h,r); if(d>r.r+h.r+600) return false; const vx=h.axis==='x'?(h.v||0):0, vy=h.axis==='y'?(h.v||0):0; const closing=((r.x-h.x)*vx+(r.y-h.y)*vy)/((d||1)); return closing>300; }); }
+  spawn(player(g,design.intake,0.9)); spawn(player(o,o.d.intake,o.d.skill));
+  while(!M.finished){
+    // pendulums
+    for(const h of world.hazards){ const s=Math.sin((sim.t/h.per)*2*Math.PI+h.ph); if(h.axis==='x') h.x=h.cx+s*h.amp; else h.y=h.cy+s*h.amp; h.v=Math.cos((sim.t/h.per)*2*Math.PI+h.ph)*h.amp*2*Math.PI/h.per;
+      h.touch=h.touch||{}; for(const r of world.robots){ const near=hyp(h,r)<h.r+r.r*0.8; if(!near){ h.touch[r.id]=false; continue; } if(h.touch[r.id]) continue; h.touch[r.id]=true; { const nx=(r.x-h.x)/(hyp(h,r)||1), ny=(r.y-h.y)/(hyp(h,r)||1); const impulse=Math.abs(h.v)*0.9; r.vx+=nx*impulse; r.vy+=ny*impulse; r.x+=nx*30; r.y+=ny*30;
+          const pFlip=clamp((Math.abs(h.v)-1200)/4000,0,0.14)*(design.height/500)*(r===g?1:1.1); if(!r.flipped&&Math.random()<pFlip){ r.flipped=true; r.immobile=true; log(`<span class="bad">${r.id} struck by a hanging weight at ${(Math.abs(h.v)/1000).toFixed(1)} m/s and FLIPPED — immobile (§4.12.14)</span>`,'bad'); } else log(`${r.id} clipped by a hanging weight (${(Math.abs(h.v)/1000).toFixed(1)} m/s)`,'ev'); if(r.held){ r.held.held=null; r.held.x=r.x+nx*300; r.held.y=r.y+ny*300; r.held=null; } } }
+      for(const b of world.balls){ if(!b.held&&!b.scored&&hyp(h,b)<h.r+100){ b.x+=(b.x-h.x)*0.4; b.y+=(b.y-h.y)*0.4; } } }
+    contact(g,o,0.02); for(const r of world.robots) keepOnSticker(r); for(const b of world.balls){ if(!b.scored&&!b.held){ b.x=clamp(b.x,S0+200,S1-200); b.y=clamp(b.y,S0+200,S1-200); } }
+    if(g.immobile||o.immobile){ M.finished=true; M.score.ended=(g.immobile?'Genesis':'Opponent')+' immobilised'; }
+    if(sim.t-t0>=M.limit){ M.finished=true; M.score.ended='8 min'; }
+    yield; }
+  let win; if(g.immobile&&!o.immobile) win='OPP'; else if(o.immobile&&!g.immobile) win='GEN'; else win=M.score.gen>M.score.opp?'GEN':M.score.gen<M.score.opp?'OPP':(M.score.locks.gen<M.score.locks.opp?'GEN':'judges');
+  results.hh={win:win==='GEN',pts:M.score.gen,opp:M.score.opp};
+  log(`<span class="sys">■ Hanging Hazard ends (${M.score.ended}): Genesis ${M.score.gen} – ${M.score.opp}${win==='judges'?' · tie → judges\' decision, lock counts matter (§4.12.11)':''} → ${win==='GEN'?'<b class="ok">Genesis wins</b>':win==='OPP'?'<b class="bad">Genesis loses</b>':'judges decide'}</span>`,'sys');
+  yield* wait(3); if(sim.auto) nextGame();
+}
+
+// ---------- orchestration ----------
+const ORDER=['tof','chaos','wil','hh']; const STARTERS={tof:gameTOF,chaos:gameCHAOS,wil:gameWIL,hh:gameHH};
+function startGame(k){ resetWorld(); sim.runners=[]; spawn(STARTERS[k]()); document.querySelectorAll('[data-g]').forEach(b=>b.classList.toggle('on',b.dataset.g===k)); document.getElementById('insightBox').innerHTML=INSIGHTS[k]; }
+function nextGame(){ const i=ORDER.indexOf(sim.game?sim.game.key:''); startGame(ORDER[(i+1)%ORDER.length]); }
+const INSIGHTS={
+ tof:`<b>Time of Fall is pure traction.</b> Max pull = μ · m · g, so at 20 kg and μ≈0.9 you get ~175 N no matter how strong the motors are; power beyond that only spins wheels (watch the slip indicator). Spend the weight budget on <b>ballast over the drive wheels and soft high‑grip tyres</b>, not motors. Winners rank by shortest time (§4.8.5.2) and a 1st‑priority pull ranks above any timeout win, so a decisive early yank beats a stalemate. Your tow point must take the 11 mm connector (17 mm gate) or you are disqualified for this game (§4.9.3), and no add‑ons at all here (§4.9.5).`,
+ chaos:`<b>Climate CHAOS rewards caution and width.</b> Tower C (3 columns, 150 pts) has the widest gaps but the harshest collapse penalty (−100). With a 900 mm span, a 600 mm robot has ~150 mm per side under Tower A (5 columns = 225 mm gaps) which is nearly impossible without assist. The MII driver‑assist layer (front LiDAR, column envelope) is what makes Tower A survivable; toggle it off to see collision rates jump. A <b>washout</b> ends the run and ranks you below equal scores (§4.10.12), so the planner treats flood cells as walls. The fire timer escalates after each tower (§4.10.28): go for C early when it is reachable.`,
+ wil:`<b>Weight in Line is 100 points of placement, then a 100‑point gamble.</b> Six rings, 5–30 pts each; a weight fully inside its ring scores 100%, touching the circle 75%, straddling 50% (§4.11.11). The spindle lifter through the 28 mm hole is the difference between 100% and 50% tiers. Only after <i>all</i> your weights are scored may you push the opponent into a pit (own pit 100, theirs 50); pushing before that <b>loses the match outright</b> (§4.11.8). Active add‑ons may never touch the opponent (§4.11.5). Two yellows = red, and a red hands the opponent 100 points.`,
+ hh:`<b>Hanging Hazard is the final and it is a brawl.</b> Three rugby balls, score in the opponent's pocket, 8 minutes, and the hanging weights are the great equaliser: a 1.5 m/s pendulum strike on a 50 cm‑tall robot can flip it, and a flipped robot loses immediately (§4.12.14). Keep the centre of mass low and give the assist layer the pendulum phase so it waits for the swing to pass. Locking the opponent is allowed for ≤10 s (note under §4.12.14); repeated locks count against you in a judges' decision, so once the balls are gone, defend rather than wrestle.`
+};
+function bracket(){ const b=document.getElementById('bracketBox'); const row=(k,n,res)=>`<div class="${sim.game&&sim.game.key===k?'cur':''}">${n}: ${res==null?'—':res}</div>`;
+  const tof=results.tof? (results.tof.rank==='DQ'?'<span class="lost">DQ</span>': results.tof.win?`<span class="won">won in ${fmt(results.tof.time)}${results.tof.first?' (1st priority)':''}</span>`:`<span class="lost">lost</span>`):null;
+  const ch=results.chaos? `<span class="${results.chaos.pts>0?'won':'lost'}">${results.chaos.pts} pts · ${fmt(results.chaos.time)}${results.chaos.washout?' · washout':''}</span>`:null;
+  const wil=results.wil? `<span class="${results.wil.win?'won':'lost'}">${results.wil.pts}–${results.wil.opp}</span>`:null;
+  const hh=results.hh? `<span class="${results.hh.win?'won':'lost'}">${results.hh.pts}–${results.hh.opp}</span>`:null;
+  const wins=[results.tof&&results.tof.win,results.wil&&results.wil.win].filter(Boolean).length;
+  b.innerHTML=`<div style="color:#8a98b3">Qualifying (random draw, no same‑country pairs §4.8.4)</div>${row('tof','R1 Time of Fall',tof)}${row('chaos','R2 Climate CHAOS',ch)}${row('wil','R3 Weight in Line',wil)}<div style="color:#8a98b3;margin-top:4px">Knockout (top 8 §4.8.6.1): QF & SF Weight in Line → Final Hanging Hazard</div>${row('hh','Final Hanging Hazard',hh)}<div style="margin-top:4px;color:#8a98b3">Robot must retract to its initial configuration after every game or it loses that match (§4.3.4).</div>`; }
+
+// ---------- rendering ----------
+const cv=document.getElementById('main'), ctx=cv.getContext('2d'); let S=0.1, OX=0, OY=0;
+function fit(){ const r=cv.getBoundingClientRect(); cv.width=r.width*devicePixelRatio; cv.height=r.height*devicePixelRatio; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); const pad=20; S=Math.min((r.width-pad*2)/ARENA,(r.height-pad*2-36)/ARENA); OX=(r.width-ARENA*S)/2; OY=pad+30; } window.addEventListener('resize',fit); fit();
+const P=(x,y)=>[OX+x*S,OY+y*S];
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function shade(hex,k){ const n=parseInt(hex.slice(1),16); const r=clamp(((n>>16)&255)*k,0,255),g=clamp(((n>>8)&255)*k,0,255),b=clamp((n&255)*k,0,255); return `rgb(${r|0},${g|0},${b|0})`; }
+function drawArena(){
+  const r=cv.getBoundingClientRect(); ctx.fillStyle='#0f1420'; ctx.fillRect(0,0,r.width,r.height);
+  const [x,y]=P(0,0); const w=ARENA*S; ctx.save(); ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=20; ctx.fillStyle=C.wood; rr(x,y,w,w,6); ctx.fill(); ctx.restore();
+  // plywood panels (1220 mm) with 4 mm gaps (§1.2.2)
+  ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.lineWidth=Math.max(1,4*S); for(let g=0;g<=ARENA;g+=1220){ const [a,b]=P(g,0); ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(a,b+w); ctx.stroke(); const [c,d]=P(0,g); ctx.beginPath(); ctx.moveTo(c,d); ctx.lineTo(c+w,d); ctx.stroke(); }
+  // sticker
+  const [sx,sy]=P(S0,S0); ctx.fillStyle=C.sticker; rr(sx,sy,STK*S,STK*S,4); ctx.fill(); ctx.strokeStyle='#9a9a9a'; ctx.lineWidth=1; rr(sx,sy,STK*S,STK*S,4); ctx.stroke();
+  ctx.fillStyle='#6b7893'; ctx.font='10px sans-serif'; ctx.fillText('6 m × 6 m plywood arena · 4 m × 4 m sticker', x+6, y-6);
+  // pits / pockets
+  for(const p of world.pits){ const [a,b]=P(p.x,p.y); ctx.fillStyle=C.pit; rr(a,b,p.w*S,p.h*S,3); ctx.fill(); if(p.color){ ctx.strokeStyle=C[p.color]; ctx.lineWidth=3; rr(a,b,p.w*S,p.h*S,3); ctx.stroke(); ctx.fillStyle=C[p.color]; ctx.font='bold 10px sans-serif'; ctx.fillText(p.color.toUpperCase()+' PIT', a+6, b+14); } else { ctx.fillStyle='#e2e8f0'; ctx.font='bold 10px sans-serif'; ctx.save(); ctx.translate(a+p.w*S/2,b+p.h*S/2); ctx.rotate(-Math.PI/2); ctx.textAlign='center'; ctx.fillText('THE FALL (pit)',0,4); ctx.restore(); } }
+  for(const p of world.pockets){ const [a,b]=P(p.x,p.y); ctx.fillStyle=shade(C[p.color],0.35); rr(a,b,p.w*S,p.h*S,3); ctx.fill(); ctx.strokeStyle=C[p.color]; ctx.lineWidth=3; rr(a,b,p.w*S,p.h*S,3); ctx.stroke(); ctx.fillStyle=C[p.color]; ctx.font='bold 10px sans-serif'; ctx.fillText(p.color.toUpperCase()+' POCKET', a+6, b+14); }
+}
+function drawChaos(){
+  if(!world.maze||!world.fire) return; const W=world.maze;
+  // fire front
+  const [fx]=P(world.fire.front,0); const [, y0]=P(0,S0); const grd=ctx.createLinearGradient(fx-60,0,fx,0); grd.addColorStop(0,'rgba(245,106,43,0)'); grd.addColorStop(1,'rgba(245,106,43,.55)'); ctx.fillStyle=grd; ctx.fillRect(fx-60,y0,Math.max(0,P(S1,0)[0]-fx+60),STK*S);
+  ctx.fillStyle='rgba(245,106,43,.9)'; ctx.font='bold 10px sans-serif'; ctx.fillText('🔥 FOREST FIRE', Math.min(fx+4,P(S1,0)[0]-80), y0+14);
+  for(const f of world.flood){ const [a,b]=P(f.x-CELL/2,f.y-CELL/2); ctx.fillStyle='rgba(43,108,176,.55)'; ctx.fillRect(a,b,CELL*S,CELL*S); ctx.strokeStyle='rgba(144,205,244,.8)'; for(let i=1;i<4;i++){ ctx.beginPath(); ctx.moveTo(a+4,b+i*CELL*S/4); ctx.quadraticCurveTo(a+CELL*S/2,b+i*CELL*S/4-4,a+CELL*S-4,b+i*CELL*S/4); ctx.stroke(); } ctx.fillStyle='#e2e8f0'; ctx.font='8px sans-serif'; ctx.fillText('FLOOD',a+4,b+10); }
+  for(const s of world.sinks){ const [a,b]=P(s.x,s.y); const g2=ctx.createRadialGradient(a,b,2,a,b,CELL*0.45*S); g2.addColorStop(0,'#000'); g2.addColorStop(1,'#5a4a3a'); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(a,b,CELL*0.45*S,0,7); ctx.fill(); ctx.fillStyle='#e2e8f0'; ctx.font='8px sans-serif'; ctx.fillText('SINKHOLE',a-20,b+3); }
+  for(const c of world.cars){ const [a,b]=P(c.x,c.y); ctx.save(); ctx.translate(a,b); ctx.rotate(c.th); ctx.fillStyle='#718096'; rr(-180*S,-90*S,360*S,180*S,4); ctx.fill(); ctx.fillStyle='#a0aec0'; rr(-80*S,-70*S,120*S,140*S,3); ctx.fill(); ctx.restore(); }
+  // walls
+  ctx.strokeStyle='#4a5568'; ctx.lineWidth=Math.max(2,60*S); ctx.lineCap='square';
+  for(let x=0;x<N;x++) for(let y=0;y<N;y++){ const [a,b]=P(S0+x*CELL,S0+y*CELL); if(W[x][y].r&&x<N-1){ ctx.beginPath(); ctx.moveTo(a+CELL*S,b); ctx.lineTo(a+CELL*S,b+CELL*S); ctx.stroke(); } if(W[x][y].d&&y<N-1){ ctx.beginPath(); ctx.moveTo(a,b+CELL*S); ctx.lineTo(a+CELL*S,b+CELL*S); ctx.stroke(); } }
+  // safe zone
+  const sz=world.safe; const [a,b]=P(sz.x,sz.y); ctx.fillStyle='rgba(52,194,107,.25)'; ctx.fillRect(a,b,sz.w*S,sz.h*S); ctx.strokeStyle=C.green; ctx.lineWidth=2; ctx.strokeRect(a,b,sz.w*S,sz.h*S); ctx.fillStyle=C.green; ctx.font='bold 10px sans-serif'; ctx.fillText('SAFE ZONE', a+6, b+14);
+  // towers
+  for(const t of world.towers){ const [tx,ty]=P(t.x,t.y); const w=t.w*S; ctx.save(); ctx.translate(tx,ty);
+    if(t.collapsed){ ctx.fillStyle='rgba(0,0,0,.35)'; for(let i=0;i<t.cols;i++){ ctx.save(); ctx.rotate(rnd(0,0)+i*0.7); rr(-w/2+i*w/t.cols,-10,w/4,8,2); ctx.fill(); ctx.restore(); } }
+    else { ctx.fillStyle=t.burnt?'rgba(245,106,43,.35)':'rgba(0,0,0,.12)'; rr(-w/2,-w/2*0.5,w,w*0.5,4); ctx.fill(); // roof footprint
+      for(let i=0;i<t.cols;i++){ const cx=-w/2+i*(w/(t.cols-1)); ctx.fillStyle=t.burnt?'#7b341e':'#2d3748'; ctx.beginPath(); ctx.arc(cx,-w*0.25,Math.max(2,40*S),0,7); ctx.fill(); ctx.beginPath(); ctx.arc(cx,w*0.25,Math.max(2,40*S),0,7); ctx.fill(); }
+      if(!t.cutout.onRobot&&!t.cutout.rescued){ ctx.fillStyle='#a0aec0'; ctx.beginPath(); ctx.arc(0,0,Math.max(3,60*S),0,7); ctx.fill(); ctx.fillStyle='#1a202c'; ctx.font='8px sans-serif'; ctx.textAlign='center'; ctx.fillText(t.cutout.name,0,3); ctx.textAlign='left'; } }
+    ctx.fillStyle=t.collapsed?C.red:(t.burnt?C.fire:'#1a202c'); ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText(`Tower ${t.n} · ${t.cols} col · +${t.pts}${t.collapsed?' COLLAPSED':t.burnt?' BURNT':''}`,0,-w*0.25-14); ctx.textAlign='left'; ctx.restore(); }
+}
+function drawWeights(){
+  for(const q of world.rings){ const [a,b]=P(q.x,q.y); ctx.strokeStyle=C[q.color]; ctx.lineWidth=Math.max(2,18*S); ctx.beginPath(); ctx.arc(a,b,q.d/2*S,0,7); ctx.stroke(); ctx.fillStyle=shade(C[q.color],0.9); ctx.font='9px sans-serif'; ctx.textAlign='center'; ctx.fillText(`${WSPEC[q.i].kg} kg`,a,b-q.d/2*S-4); ctx.textAlign='left'; }
+  for(const w of world.weights){ const lift=w.held?1.12:1; const [a,b]=P(w.x,w.y); ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.arc(a+3,b+3,w.d/2*S*lift,0,7); ctx.fill(); const g2=ctx.createRadialGradient(a-4,b-4,2,a,b,w.d/2*S*lift); g2.addColorStop(0,shade(C[w.color],1.3)); g2.addColorStop(1,shade(C[w.color],0.65)); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(a,b,w.d/2*S*lift,0,7); ctx.fill(); ctx.fillStyle='#1a202c'; ctx.beginPath(); ctx.arc(a,b,14*S*lift,0,7); ctx.fill(); ctx.fillStyle='#fff'; ctx.font='bold 8px sans-serif'; ctx.textAlign='center'; ctx.fillText(w.kg+'kg',a,b+w.d/2*S*lift+9); ctx.textAlign='left'; }
+}
+function drawHH(){
+  for(const h of world.hazards){ const [cx,cy]=P(h.cx,h.cy); const [a,b]=P(h.x,h.y); ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.setLineDash([4,4]); ctx.beginPath(); if(h.axis==='x'){ ctx.moveTo(P(h.cx-h.amp,0)[0],cy); ctx.lineTo(P(h.cx+h.amp,0)[0],cy);} else { ctx.moveTo(cx,P(0,h.cy-h.amp)[1]); ctx.lineTo(cx,P(0,h.cy+h.amp)[1]); } ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle='#4a5568'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(a,b); ctx.stroke(); ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.arc(a+6,b+8,h.r*S,0,7); ctx.fill(); const g2=ctx.createRadialGradient(a-5,b-5,2,a,b,h.r*S); g2.addColorStop(0,'#718096'); g2.addColorStop(1,'#1a202c'); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(a,b,h.r*S,0,7); ctx.fill(); ctx.fillStyle='#e2e8f0'; ctx.font='8px sans-serif'; ctx.textAlign='center'; ctx.fillText(`${(Math.abs(h.v||0)/1000).toFixed(1)} m/s`,a,b+3); ctx.textAlign='left'; }
+  for(const bl of world.balls){ const [a,b]=P(bl.x,bl.y); ctx.save(); ctx.translate(a,b); ctx.rotate(bl.rot); ctx.fillStyle=bl.scored?'rgba(255,255,255,.35)':'#f7fafc'; ctx.beginPath(); ctx.ellipse(0,0,bl.l/2*S,bl.w/2*S,0,0,7); ctx.fill(); ctx.strokeStyle='#2d3748'; ctx.lineWidth=1; ctx.stroke(); ctx.strokeStyle='#c53030'; ctx.beginPath(); ctx.moveTo(-bl.l/2*S*0.7,0); ctx.lineTo(bl.l/2*S*0.7,0); ctx.stroke(); ctx.restore(); }
+}
+function drawRobot(r){
+  const [a,b]=P(r.x,r.y); const w=r.d.width*S, l=r.d.length*S; ctx.save(); ctx.translate(a,b); ctx.rotate(r.th);
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=10; ctx.fillStyle=r.flipped?'#4a5568':shade(r.color,0.6); rr(-l/2,-w/2,l,w,6); ctx.fill(); ctx.restore();
+  // wedge front
+  if(r.d.wedge){ ctx.fillStyle=shade(r.color,0.5); ctx.beginPath(); ctx.moveTo(l/2,-w/2); ctx.lineTo(l/2+90*S,0); ctx.lineTo(l/2,w/2); ctx.closePath(); ctx.fill(); }
+  // tyres
+  ctx.fillStyle='#111'; for(const [px,py] of [[-l*0.32,-w/2-10*S],[l*0.32,-w/2-10*S],[-l*0.32,w/2-24*S],[l*0.32,w/2-24*S]]){ rr(px-50*S,py,100*S,34*S,4); ctx.fill(); if(r.slip>0.2){ ctx.fillStyle='rgba(255,255,255,'+r.slip*0.6+')'; rr(px-60*S,py-6*S,120*S,8*S,2); ctx.fill(); ctx.fillStyle='#111'; } }
+  // top plate
+  const g2=ctx.createLinearGradient(0,-w/2,0,w/2); g2.addColorStop(0,shade(r.color,1.25)); g2.addColorStop(1,shade(r.color,0.8)); ctx.fillStyle=r.flipped?'#2d3748':g2; rr(-l/2+8*S,-w/2+8*S,l-16*S,w-16*S,5); ctx.fill();
+  // kill switch (visible, marked §4.4.2.3)
+  ctx.fillStyle='#c53030'; ctx.beginPath(); ctx.arc(-l/2+60*S,0,30*S,0,7); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke();
+  // mast with LiDAR / depth cam (Genesis)
+  if(r.id==='GEN'&&r.d.lidar){ ctx.fillStyle='#1a202c'; ctx.beginPath(); ctx.arc(l/2-80*S,0,45*S,0,7); ctx.fill(); ctx.strokeStyle='rgba(79,209,197,.6)'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(l/2-80*S,0,45*S+4+((sim.t*4)%6),0,7); ctx.stroke(); ctx.fillStyle='#2d3748'; rr(-40*S,-60*S,80*S,120*S,4); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.beginPath(); ctx.arc(20*S,0,12*S,0,7); ctx.fill(); }
+  // spindle lifter / intake
+  if(r.d.spindle&&sim.game&&sim.game.key==='wil'){ ctx.fillStyle='#a0aec0'; rr(l/2-20*S,-14*S,140*S,28*S,3); ctx.fill(); }
+  if(r.d.intake&&sim.game&&sim.game.key==='hh'){ ctx.fillStyle='#2d3748'; for(let i=0;i<3;i++){ ctx.beginPath(); ctx.arc(l/2+10*S,-w/3+i*w/3,22*S,0,7); ctx.fill(); } }
+  if(r.flipped){ ctx.fillStyle='#f56565'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText('FLIPPED',0,4); ctx.textAlign='left'; }
+  ctx.restore();
+  // held object indicator
+  if(r.held&&!r.held.l){ /* weight follows robot */ r.held.x=r.x+Math.cos(r.th)*(r.d.length/2+r.held.d/2-40); r.held.y=r.y+Math.sin(r.th)*(r.d.length/2+r.held.d/2-40); }
+  if(r.held&&r.held.l){ r.held.x=r.x+Math.cos(r.th)*(r.d.length/2+100); r.held.y=r.y+Math.sin(r.th)*(r.d.length/2+100); r.held.rot=r.th; }
+  for(const [i,c] of r.carry.entries()){ const [cx,cy]=P(r.x,r.y); ctx.fillStyle='#a0aec0'; ctx.beginPath(); ctx.arc(cx-20+i*14,cy-w/2-8,5,0,7); ctx.fill(); }
+  ctx.fillStyle=r.color; ctx.font='bold 10px sans-serif'; ctx.fillText(r.id==='GEN'?'TEAM GENESIS':'OPPONENT', a-34, b+w/2+14);
+  if(sim.flags.fpv&&r.id==='GEN'&&!r.flipped){ // assist envelope rings (1.0 m / 1.5 m as in the MII layer)
+    ctx.strokeStyle='rgba(79,209,197,.35)'; ctx.setLineDash([3,5]); ctx.beginPath(); ctx.arc(a,b,1000*S,0,7); ctx.stroke(); ctx.strokeStyle='rgba(246,173,85,.3)'; ctx.beginPath(); ctx.arc(a,b,1500*S,0,7); ctx.stroke(); ctx.setLineDash([]); }
+}
+function drawChain(){ if(!world.chain||world.robots.length<2) return; const [g,o]=world.robots; const [a,b]=P(g.x+g.r*0.6,g.y), [c,d]=P(o.x-o.r*0.6,o.y); ctx.strokeStyle='#718096'; ctx.lineWidth=3; ctx.setLineDash([5,3]); ctx.beginPath(); ctx.moveTo(a,b); ctx.lineTo(c,d); ctx.stroke(); ctx.setLineDash([]); for(const [x,y] of [[a,b],[c,d]]){ ctx.fillStyle='#a0aec0'; ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fill(); } ctx.fillStyle='#4a5568'; ctx.font='9px sans-serif'; ctx.fillText('chain · 11 mm connectors', (a+c)/2-50, b-10); }
+function drawHUD(){ const M=sim.game; if(!M) return; const r=cv.getBoundingClientRect();
+  ctx.fillStyle='rgba(11,15,23,.85)'; rr(OX,6,ARENA*S,24,6); ctx.fill(); ctx.fillStyle='#dbe4f3'; ctx.font='bold 12px sans-serif'; ctx.fillText(M.name, OX+10, 23);
+  const left=M.limit-sim.t; ctx.font='12px monospace'; ctx.fillStyle=left<15?'#f05252':'#4fd1c5'; ctx.textAlign='right'; ctx.fillText(`${fmt(Math.min(sim.t,M.limit))} / ${fmt(M.limit)} ${sim.playing?'':'⏸'} ${sim.speed}×${sim.killed?'  ⬤ KILLED':''}`, OX+ARENA*S-10, 23); ctx.textAlign='left';
+  ctx.fillStyle='#1a2235'; ctx.fillRect(OX,30,ARENA*S,3); ctx.fillStyle=left<15?'#f05252':'#4fd1c5'; ctx.fillRect(OX,30,ARENA*S*clamp(sim.t/M.limit,0,1),3);
+  world.notes=world.notes.filter(n=>sim.t-n.t<2.5); for(const n of world.notes){ const age=(sim.t-n.t)/2.5; const [a,b]=P(n.x,n.y); ctx.globalAlpha=1-age; ctx.fillStyle='#f6ad55'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText(n.txt,a,b-age*20); ctx.textAlign='left'; ctx.globalAlpha=1; }
+  if(M.finished){ const [a,b]=P(ARENA/2,ARENA/2); ctx.fillStyle='rgba(11,15,23,.8)'; rr(a-170,b-26,340,52,8); ctx.fill(); ctx.fillStyle='#4fd1c5'; ctx.font='bold 15px sans-serif'; ctx.textAlign='center'; const s=M.score; const txt=M.key==='tof'?`${s.winner==='GEN'?'Genesis wins':'Genesis loses'} · ${fmt(s.time)}`:M.key==='chaos'?`${s.final} pts · ${fmt(s.time)}`:`Genesis ${s.gen} – ${s.opp}`; ctx.fillText(txt,a,b+6); ctx.textAlign='left'; }
+  if(sim.killed){ const [a,b]=P(ARENA/2,S1+400); ctx.fillStyle='#f05252'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center'; ctx.fillText('⬤ KILL SWITCH ENGAGED — drive, add‑ons and comms off (§4.4.2.2)',a,b); ctx.textAlign='left'; } }
+
+// ---------- side panels ----------
+function drawScore(){ const M=sim.game; const box=document.getElementById('scoreBox'); document.getElementById('gameTag').textContent=M?M.key.toUpperCase():'—'; if(!M) return; const s=M.score; const rows=[]; const row=(k,v,c='')=>rows.push(`<div class="k">${k}</div><div class="v ${c}">${v}</div>`);
+  const g=world.robots[0], o=world.robots[1];
+  if(M.key==='tof'){ row('Genesis pull (min of motor, μmg)', g?`${g.maxForce().toFixed(0)} N`:'–', ''); row('Opponent pull', o?`${o.maxForce().toFixed(0)} N`:'–'); row('wheel slip', g?`${(g.slip*100).toFixed(0)}%`:'–', g&&g.slip>0.3?'bad':''); row('result', s.winner?(s.winner==='GEN'?'Genesis wins':'Genesis loses'):'…', s.winner==='GEN'?'good':s.winner?'bad':''); row('time', s.time?fmt(s.time):fmt(sim.t),'big'); }
+  else if(M.key==='chaos'){ row('rescued', `${s.rescued}/3`); row('points', `+${s.pts}`,'good'); row('penalties', `−${s.pen}`, s.pen?'bad':''); row('collisions', s.collisions, s.collisions?'bad':''); row('washout', s.washout?'YES':'no', s.washout?'bad':'good'); row('fire front', world.fire?`${Math.max(0,(world.fire.front-S0)/1000).toFixed(2)} m from left`:'–'); row('score', s.final??(s.pts-s.pen),'big'); }
+  else { row('Genesis', s.gen, 'good'); row('Opponent', s.opp, 'bad'); if(M.key==='wil'){ row('cards G / O', `${s.cards.gen.join('')||'–'} / ${s.cards.opp.join('')||'–'}`); row('weights left G / O', `${world.weights.filter(w=>w.color==='blue'&&!w.placed).length} / ${world.weights.filter(w=>w.color==='red'&&!w.placed).length}`); } if(M.key==='hh'){ row('balls left', world.balls.filter(b=>!b.scored).length); row('locks G / O', `${s.locks.gen} / ${s.locks.opp}`); } row('clock', fmt(Math.min(sim.t,M.limit)),'big'); }
+  box.innerHTML=rows.join(''); bracket(); }
+function drawDesign(){ const box=document.getElementById('designBox'); const sl=(k,min,max,step,unit)=>`<span>${k}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${design[k]}" data-k="${k}"><span class="v">${design[k]}${unit}</span>`;
+  if(!box.dataset.built){ box.innerHTML=sl('mass',10,24,0.5,' kg')+sl('mu',0.4,1.3,0.05,' μ')+sl('power',80,400,10,' N')+sl('width',400,900,10,' mm')+sl('length',400,900,10,' mm')+sl('height',250,650,10,' mm')+sl('towPoint',8,16,0.5,' mm'); box.dataset.built=1;
+    box.querySelectorAll('input').forEach(i=>i.oninput=()=>{ design[i.dataset.k]=+i.value; i.nextElementSibling.textContent=i.value+i.nextElementSibling.textContent.replace(/^[\d.]+/,''); if(world.robots[0]){ world.robots[0].mass=design.mass; world.robots[0].r=Math.max(design.width,design.length)/2*0.95; } drawChecks(); }); }
+  ['adSpindle','adIntake','adWedge','adLidar'].forEach(id=>{ const el=document.getElementById(id); el.onchange=()=>{ design[{adSpindle:'spindle',adIntake:'intake',adWedge:'wedge',adLidar:'lidar'}[id]]=el.checked; drawChecks(); }; }); drawChecks(); }
+function drawChecks(){ const c=[]; const ok=(t,ref,good)=>c.push(`<span class="${good?'ok':'bad'}">${good?'✓':'✗'} ${t}</span><span class="ref">${ref}</span>`);
+  ok(`weight ${design.mass} kg ≤ 20 kg (heaviest add‑on setup)`,'§4.3.1–2',design.mass<=20); ok(`footprint ${design.length}×${design.width} ≤ 800×800 mm`,'§4.3.3',design.length<=800&&design.width<=800); ok(`height ${design.height} ≤ 500 mm`,'§4.3.5',design.height<=500); ok('24 V DC max','§4.1.1',design.volt<=24); ok('kill switch visible, marked, < 60 s full disconnect','§4.4.2.2–3',true);
+  ok(`tow point ${design.towPoint} mm fits 11 mm connector (gate 17 mm)`,'§4.9.3',design.towPoint>=8&&design.towPoint<=11); ok('≥1 active and ≥1 effective add‑on','§4.1.5',(design.spindle||design.intake)&&design.wedge); ok('automated tools: e‑stop + manual override present','§4.1.8 / §4.6.10',true); ok('retracts to initial configuration after each game','§4.3.4',true); ok(`fits under 60 cm tower clearance`,'§4.10.31',design.height<=600);
+  document.getElementById('chkBox').innerHTML=c.join(''); }
+function drawAssist(){ const g=world.robots[0]; const box=document.getElementById('assistBox'); if(!g){ box.innerHTML=''; return; } const tiers=['IDLE','SAFE','CAUTION','WARNING','DANGER'];
+  const opp=world.robots[1]; const d=opp?hyp(g,opp):Infinity; let tier=g.assistTier||0; if(opp&&d<1000) tier=Math.max(tier,3); else if(opp&&d<1500) tier=Math.max(tier,2);
+  const lines=[`<div class="t${tier}">tier ${tier} ${tiers[tier]}</div>`, `<div class="t0">v = ${(Math.hypot(g.vx,g.vy)/1000).toFixed(2)} m/s · F = ${g.maxForce().toFixed(0)} N · slip ${(g.slip*100).toFixed(0)}% · payload ${(g.totalMass-g.mass).toFixed(1)} kg</div>`, `<div>${g.assistMsg||''}</div>`];
+  if(opp&&opp.x>0) lines.push(`<div class="t${d<1000?3:d<1500?2:1}">opponent at ${(d/1000).toFixed(2)} m ${d<1000?'(MOVE AWAY envelope)':d<1500?'(TOO CLOSE envelope)':''}</div>`);
+  for(const h of world.hazards){ const dd=hyp(h,g); if(dd<1500) lines.push(`<div class="t${dd<700?4:3}">hanging weight ${(dd/1000).toFixed(2)} m · ${(Math.abs(h.v||0)/1000).toFixed(1)} m/s</div>`); }
+  if(!(sim.flags.assist&&design.lidar)) lines.push('<div class="t3">assist OFF — throttle limits and envelopes disabled</div>');
+  box.innerHTML=lines.join(''); }
+
+// ---------- main loop ----------
+let last=performance.now(), ui=0;
+function frame(now){ const real=Math.min(0.05,(now-last)/1000); last=now;
+  if(sim.playing){ const dt=real*sim.speed; const sub=Math.max(1,Math.ceil(dt/0.02)); const h=dt/sub; for(let i=0;i<sub;i++){ sim.t+=h; for(const r of world.robots) r.step(h); runAll(); } sim.frames++; }
+  drawArena(); drawChaos(); drawWeights(); drawHH(); drawChain(); for(const r of world.robots) if(r.x>0) drawRobot(r); drawHUD();
+  if(ui++%3===0){ drawScore(); drawAssist(); }
+  requestAnimationFrame(frame); }
+
+// ---------- controls ----------
+const $=id=>document.getElementById(id);
+$('play').onclick=()=>{ sim.playing=!sim.playing; $('play').textContent=sim.playing?'⏸ Pause':'▶ Play'; $('play').classList.toggle('on',sim.playing); };
+$('reset').onclick=()=>startGame(sim.game?sim.game.key:'tof');
+$('auto').onclick=()=>{ sim.auto=!sim.auto; $('auto').classList.toggle('on',sim.auto); };
+$('kill').onclick=()=>{ sim.killed=!sim.killed; $('kill').textContent=sim.killed?'⬤ KILLED (restart to clear)':'⬤ KILL SWITCH'; if(sim.killed) log('<span class="bad">⬤ KILL SWITCH: Genesis fully deactivated — drive, add‑ons, comms (§4.4.2.2). Restart the game to continue.</span>','bad'); };
+$('speed').oninput=e=>{ sim.speed=+e.target.value; $('speedv').textContent=sim.speed+'×'; };
+$('tgAssist').onclick=()=>{ sim.flags.assist=!sim.flags.assist; $('tgAssist').classList.toggle('on',sim.flags.assist); };
+$('tgFpv').onclick=()=>{ sim.flags.fpv=!sim.flags.fpv; $('tgFpv').classList.toggle('on',sim.flags.fpv); };
+$('tgOpp').onclick=()=>{ oppLvl=(oppLvl+1)%oppLevels.length; $('tgOpp').textContent='Opp: '+oppLevels[oppLvl].n; };
+document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>startGame(b.dataset.g));
+window.addEventListener('keydown',e=>{ if(e.target.tagName==='INPUT') return; if(e.code==='Space'){ e.preventDefault(); $('play').click(); } if(e.key>='1'&&e.key<='4') startGame(ORDER[+e.key-1]); if(e.key==='n'||e.key==='N') nextGame(); if(e.key==='k'||e.key==='K') $('kill').click(); });
+drawDesign();
+log('<span class="sys">Arena 4 Games simulator ready · rules V0.6 §4 · adjust the Genesis design, then run the games</span>','sys');
+startGame('tof'); requestAnimationFrame(frame);
+</script>
+</body>
+</html>

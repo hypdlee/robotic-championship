@@ -16,6 +16,12 @@ The [`robo arms/`](robo%20arms/) folder holds a second, separate demo: a real-ti
 
 **Run it:** download [`robo arms/index.html`](https://github.com/hypdlee/robotic-championship/blob/main/robo%20arms/index.html) and open it in any browser. Keys `1` to `7` select a round, `Space` pauses, `N` advances. Details and simplifications are in [`robo arms/README.md`](robo%20arms/README.md). With GitHub Pages enabled (see below) it also runs at https://hypdlee.github.io/robotic-championship/robo%20arms/.
 
+## Arena games: Arena 4 Games simulator
+
+The [`arena games/`](arena%20games/) folder holds a third demo: a real-time simulation of the **Arena 4 Games** category that Team Genesis is entered in (rulebook V0.6, section 4). A Genesis robot plays a simulated opponent on the 6 x 6 m arena through Time of Fall, Climate CHAOS (randomised map, flood, sinkholes, fire, towers A/B/C), Weight in Line (ring placement tiers, pit pushes, cards) and Hanging Hazard (rugby balls, swinging weights, flips). A design panel lets you change mass, tyre grip, drive force, footprint, height, tow point and add-ons, with live compliance checks against the rulebook, and the MII safety layer appears as the driver-assist system allowed by rule 4.1.8.
+
+**Run it:** download [`arena games/index.html`](https://github.com/hypdlee/robotic-championship/blob/main/arena%20games/index.html) and open it in any browser. Keys `1` to `4` select a game, `Space` pauses, `N` advances, `K` is the kill switch. Details are in [`arena games/README.md`](arena%20games/README.md). With GitHub Pages enabled it also runs at https://hypdlee.github.io/robotic-championship/arena%20games/.
+
 ## Pitch video and deck
 
 - `media/Genesis_Ward_Safety_Pitch.mp4`: 3-minute pitch video built from the simulation (synthetic narrator, burnt-in captions).
@@ -58,6 +64,7 @@ The page opens with the proposed layout, measured against the Genesis CAD: LiDAR
 
 - `index.html`: the whole demo in one file (also at `deployment-cases/deployment-cases.html`)
 - `robo arms/`: Robot Arm AI Challenge simulator (`index.html`) and its README
+- `arena games/`: Arena 4 Games simulator (`index.html`) and its README
 - `media/`: preview images and animations used in this README
 - `deployment-cases/src/`: page template, simulation core (`cases_core.js`) and battery core (`core.js`)
 
