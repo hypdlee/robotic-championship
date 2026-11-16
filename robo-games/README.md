@@ -1,4 +1,4 @@
-# Arena games: Arena 4 Games simulator
+# Robo games: Arena 4 Games simulator
 
 Real-time, browser-only simulation of the IEEE Global Robot Championships Malta 2026 **Arena 4 Games** category (rulebook V0.6, section 4), played by a Team Genesis robot against a simulated opponent on the 6 x 6 m plywood arena with the 4 x 4 m sticker.
 
