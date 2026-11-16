@@ -8,7 +8,7 @@ Team Genesis, University of Malta. This repository holds everything we are build
 | [`robo-arms/`](robo-arms/) | Real-time simulator of the Robot Arm AI Challenge: two SO-101-style arms through every round, scored live, with a LeRobot-style observation and policy panel | Section 5.8 | open `robo-arms/index.html` |
 | [`robo-games/`](robo-games/) | Real-time simulator of the Arena 4 Games we compete in: Time of Fall, Climate CHAOS, Weight in Line and Hanging Hazard, with a robot design panel, compliance checks and the MII layer as driver assist | Section 4 | open `robo-games/index.html` |
 
-**30-second explainer videos:** [`media/robo-arms_30s.mp4`](media/robo-arms_30s.mp4) and [`media/robo-games_30s.mp4`](media/robo-games_30s.mp4), recorded from the simulators with captions and narration.
+**Explainer videos:** [`media/robo-arms_50s.mp4`](media/robo-arms_50s.mp4) (50 s, all rounds with a title opening) and [`media/robo-games_30s.mp4`](media/robo-games_30s.mp4) (30 s), recorded from the simulators with captions and narration.
 
 **Run online (no download):**
 
