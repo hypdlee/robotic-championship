@@ -102,7 +102,7 @@ function log(msg,cls=''){ sim.log.push({t:sim.t,msg,cls}); if(sim.log.length>200
 class Robot{
   constructor(id,color,d,x,y,th){ this.id=id; this.color=color; this.d=d; this.x=x; this.y=y; this.th=th; this.vx=0; this.vy=0; this.held=null; this.carry=[]; this.immobile=false; this.flipped=false; this.pinnedUntil=0; this.pinning=null;
     this.ctrl={fx:0,fy:0}; this.mass=d.mass; this.r=Math.max(d.width,d.length)/2*0.95; this.slip=0; this.damage=0; this.fell=false; this.target=null; this.assistTier=0; this.assistMsg='IDLE'; this.done=false; this.lockT=0; }
-  get totalMass(){ return this.mass+(this.held?this.held.kg:0)+this.carry.reduce((a,c)=>a+(c.kg||0),0); }
+  get totalMass(){ return this.mass+(this.held?(this.held.kg||0.45):0)+this.carry.reduce((a,c)=>a+(c.kg||0),0); }
   traction(){ return this.d.mu*this.totalMass*G; }               // N, max ground force before wheel slip
   maxForce(){ return Math.min(this.d.power, this.traction()); }
   vmax(){ return 1400*Math.sqrt(this.d.power/250)*(this.held?0.8:1); }
