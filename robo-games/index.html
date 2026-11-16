@@ -168,7 +168,7 @@ function* gameTOF(){
     const Fg=g.maxForce()*(1+gauss(0.08)), Fo=o.maxForce()*(1+gauss(0.08)+(o.d.skill-0.85)*0.2);
     const net=Fo-Fg;                 // >0 → Genesis dragged toward pit (+x)
     const dt=0.02; const acc=net/(g.totalMass+o.totalMass)*1000;
-    g.vx+=acc*dt; g.vx*=0.93; o.vx=g.vx; g.x+=g.vx*dt; o.x=g.x+world.chain.len+g.r+o.r; g.th=Math.PI; o.th=0;
+    g.vx+=acc*dt*0.45; g.vx*=0.95; o.vx=g.vx; g.x+=g.vx*dt; o.x=g.x+world.chain.len+g.r+o.r; g.th=Math.PI; o.th=0;
     g.slip=clamp(Fg/g.traction()-0.85,0,1); o.slip=clamp(Fo/o.traction()-0.85,0,1);
     const gEdge=g.x+g.r*0.6, oEdge=o.x-o.r*0.6; // tow point ≈ front of chassis
     if(gEdge>pit.x){ g.fell=true; M.score.winner='OPP'; M.score.how='Genesis pulled over the edge'; break; }
@@ -215,7 +215,7 @@ function* gameCHAOS(){
   } while(++tries<40);
   world.maze=W;
   world.towers=towerCells.map((c,i)=>({...specs[i], cell:c, ...cc(c), w:900, clear:600, collapsed:false, cutout:{name:i===0?'family':i===1?'cat & dog':'person', rescued:false, onRobot:false}, burnt:false}));
-  world.fire={x:S1, speed:0, front:S1+200};  // front moves from the right edge leftwards; intensity grows as towers are rescued (§4.10.28)
+  world.fire={x:S1, speed:0, front:S1+700};  // front moves from the right edge leftwards; intensity grows as towers are rescued (§4.10.28)
   const [g]=makeRobots(S0+CELL,S1-CELL, -1000,-1000); world.robots=[g]; // solo run vs clock
   const M=sim.game={key:'chaos',name:'Game 2 · Climate CHAOS',limit:300,finished:false,score:{pts:0,pen:0,rescued:0,collisions:0,washout:false,time:null,final:null}};
   log(`<span class="sys">▶ Climate CHAOS</span> · map generated (revealed on the day) · towers A/B/C: 5/4/3 columns, 60 cm clearance, 900 mm wide · 5 min (§4.10.18)`,'sys');
@@ -229,7 +229,7 @@ function* gameCHAOS(){
       // washout check (§4.10.11)
       const k=c[0]+','+c[1]; if(floodSet.has(k)){ M.score.washout=true; log('<span class="bad">WASHOUT — robot entered a flood area, game stops (§4.10.11)</span>','bad'); return false; }
       // fire reached robot?
-      if(g.x>world.fire.front){ log('<span class="bad">forest fire front reached the robot — judges stop the run</span>','bad'); return false; }
+      if(g.x+200>world.fire.front){ log('<span class="bad">forest fire front reached the robot — judges stop the run</span>','bad'); return false; }
     } return true; }
   spawn((function*(){ try { yield* mission(); } finally { g.done=true; } })());
   function* mission(){
@@ -253,7 +253,7 @@ function* gameCHAOS(){
     M.score.time=sim.t-t0;
   }
   while(!g.done){ world.fire.front-=world.fire.speed*0.02*(sim.speed>0?1:0)/Math.max(1,sim.speed)*sim.speed; // advance per tick (sim seconds)
-    for(const t of world.towers) if(!t.burnt&&t.x+450>world.fire.front){ t.burnt=true; log(`<span class="ev">🔥 fire reached tower ${t.n}${t.cutout.onRobot||t.cutout.rescued?'':' — its cutout is lost'}</span>`,'ev'); }
+    for(const t of world.towers) if(!t.burnt&&t.x+300>world.fire.front){ t.burnt=true; log(`<span class="ev">🔥 fire reached tower ${t.n}${t.cutout.onRobot||t.cutout.rescued?'':' — its cutout is lost'}</span>`,'ev'); }
     if(M.score.washout) break; if(sim.t-t0>=M.limit){ log('5 minutes elapsed (§4.10.18)','ev'); break; } if(g.immobile) break; yield; }
   M.score.time=M.score.time??(sim.t-t0); M.score.final=M.score.pts-M.score.pen; M.finished=true; results.chaos={pts:M.score.final,time:M.score.time,washout:M.score.washout};
   log(`<span class="sys">■ Climate CHAOS: ${M.score.rescued}/3 rescued · +${M.score.pts} − ${M.score.pen} = <b>${M.score.final}</b> in ${fmt(M.score.time)}${M.score.washout?' · WASHOUT (ranks below equal scores §4.10.12)':''}</span>`,'sys');
