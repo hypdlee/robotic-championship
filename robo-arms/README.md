@@ -9,12 +9,12 @@ Real-time, browser-only simulation of the IEEE Global Robot Championships Malta 
 ## What it covers
 
 - Game 1, Pick-and-Place: Colour Sort, Shape Sort, Dynamic Sort (judge moves bins and nudges objects mid-run). Object points 1/2/3/5 (small) and 2/3/4/5 (large), wrong-bin deductions, +10 completion bonus, 0 to 100 clamp, (R1+R2+R3)/3.
-- Game 2, Two-Arm Coordination: Pouring (grams in bowl vs spilled), Folding (two-stage fold, alignment bands, 5 s validation), Wrap and Pack (coverage, boxing, flap closure).
+- Game 2, Two-Arm Coordination: Pouring (grams in bowl vs spilled) and Folding (two-stage fold, alignment bands, 5 s validation). Wrap and Pack is not simulated: the team is not playing it.
 - Final, Tower Construction Duel: two teams, blue and red blocks, 30 s whistle command windows, throws only when the own tower is at least 6 blocks, red block recovery, collapses and penalties.
 
 ## Controls
 
-- Toolbar or keys `1` to `7` select a round, `Space` pauses, `N` advances. Autoplay runs all rounds in order.
+- Toolbar or keys `1` to `6` select a round, `Space` pauses, `N` advances. Autoplay runs all rounds in order.
 - Policy cards (ACT, Diffusion, SmolVLA) change chunk length, inference latency, placement accuracy and whether operator commands in the final are understood.
 - E-STOP halts all motion (rule 5.7.2) and voids the run.
 - Toggles: judge perturbations, action chunk overlay, reach radii, camera rigs.

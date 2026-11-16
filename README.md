@@ -47,7 +47,7 @@ A browser simulation of the whole Robot Arm AI Challenge (section 5.8), useful f
 **Rounds covered, with the rulebook scoring reproduced**
 
 - Game 1, Pick-and-Place: Colour Sort, Shape Sort, Dynamic Sort. 32 printed objects (4 colours x 4 shapes x 2 sizes), points 1/2/3/5 small and 2/3/4/5 large, wrong-bin deductions, +10 completion bonus, 0 to 100 clamp, game score = (R1 + R2 + R3) / 3. In Dynamic Sort a judge moves bins and nudges objects while the arms run.
-- Game 2, Two-Arm Coordination: Pouring (grams in bowl vs spilled, time bands), Folding (two-stage fold, alignment bands, 5 s validation), Wrap and Pack (coverage, boxing, flap closure, time bonus). Both arms must contribute meaningfully in every round.
+- Game 2, Two-Arm Coordination: Pouring (grams in bowl vs spilled, time bands) and Folding (two-stage fold, alignment bands, 5 s validation). Both arms must contribute meaningfully in every round. Wrap and Pack is not simulated because the team is not playing it.
 - Final, Tower Construction Duel: two teams, blue build-only blocks and red dual-use blocks, 30 s whistle command windows where the operator may only give high-level intent, throws only once the own tower is at least 6 blocks, red block recovery by the opponent, collapses and penalties.
 
 **Panels:** policy cards (ACT, Diffusion Policy, SmolVLA) that change chunk length, inference latency, placement accuracy and whether operator commands in the final are understood; `observation.images.top` and `.side` camera feeds; joint-state bars for both arms; an action-chunk plot; episode and frame counters; an episode log with rule references per event; a per-round insight on why that round matters for policy and data design; an E-STOP (rule 5.7.2).
